@@ -1,0 +1,1234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CueTube</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        overflow: hidden;
+        background: #000;
+      }
+
+      /* Topbar */
+      #topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 70px;
+        background: #222;
+        color: white;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        z-index: 1002;
+      }
+      #topbar .title {
+        margin-left: 50px;
+        font-size: 20px;
+        font-weight: bold;
+      }
+
+      /* Hamburger */
+      #hamburger {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1003;
+        cursor: pointer;
+        width: 33px;
+        height: 33px;
+        padding: 8px;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        font-size: 25px;
+        user-select: none;
+      }
+      #hamburger:hover {
+        background: #333;
+      }
+      #hamburger:active {
+        background: #444;
+      }
+
+      /* Left Drawer */
+      #leftDrawer {
+        padding: 15px;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        bottom: 0;
+        width: 250px;
+        min-width: 30vw;
+        background: #111;
+        overflow: hidden;
+        transition:
+          transform 0.4s ease,
+          width 0.4s ease;
+        z-index: 1001;
+        display: flex;
+        flex-direction: column;
+      }
+      #drawerContent {
+        padding: 20px;
+        color: white;
+      }
+
+      #drawerTabs,
+      #songbookList,
+      #queueList {
+        background: transparent !important;
+      }
+
+      #dragHandle {
+        width: 5px;
+        cursor: ew-resize;
+        background: rgba(0, 0, 0, 0);
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        transition: background 0.3s ease;
+      }
+
+      /* Overlay for dragging */
+      #dragOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 2000;
+        display: none;
+      }
+
+      /* Right Content */
+      #rightContent {
+        position: fixed;
+        top: 70px;
+        left: 250px;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        background: #000;
+      }
+
+      /* Player wrapper */
+      #playerWrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #000;
+      }
+
+      /* YouTube player */
+      #ytPlayer {
+        border: none;
+        width: 100%;
+        height: 100%;
+        aspect-ratio: 16/9;
+        display: block;
+      }
+
+      /* Bottom bar */
+      #bottomBar {
+        position: fixed;
+        left: 0; /* overridden in JS to match drawer */
+        right: 0;
+        bottom: 0; /* stick to bottom of window */
+        /* remove fixed height */
+        background: #222;
+        color: white;
+        padding: 30px 15px;
+        box-sizing: border-box;
+        /*overflow: hidden;*/
+        display: flex;
+        flex-direction: column;
+      }
+
+      #bottomDragHandle {
+        position: absolute;
+        top: 0;               /* at top of bottomBar */
+        left: 0;
+        right: 0;
+        height: 5px;          /* thin drag bar */
+        cursor: ns-resize;    /* vertical drag cursor */
+        background: rgba(0, 0, 0, 0);
+        transition: background 0.3s ease;
+        z-index: 1000;
+      }
+
+      .controlBtn {
+        margin: 0 10px;
+      }
+
+/* ================================
+   TABS + THEMES (GLASS VERSION)
+================================ */
+
+      /* Tabs container */
+      #drawerTabsHeader {
+        display: flex;
+        gap: 5px;
+        padding: 10px;
+        border-bottom: 2px solid transparent; /* dynamic via theme */
+        transition: border-color 0.35s ease;
+      }
+
+      /* Theme-based bottom line for tabs */
+      #leftDrawer.theme-cyan #drawerTabsHeader {
+        border-bottom-color: rgba(0, 255, 255, 0.6);
+      }
+      #leftDrawer.theme-magenta #drawerTabsHeader {
+        border-bottom-color: #ff00ff99;
+      }
+
+      /* Base Tab Style (Glass) */
+      .drawerTab {
+        flex: 1;
+        padding: 12px 15px;
+        background: rgba(255, 255, 255, 0.07); /* GLASS */
+        backdrop-filter: blur(6px);
+        color: #aaa;
+        text-align: center;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 12px 0 12px 0;
+        position: relative;
+        transition:
+          background 0.35s ease,
+          color 0.35s ease,
+          transform 0.35s ease,
+          box-shadow 0.35s ease;
+      }
+
+      /* Ear corner */
+      .drawerTab::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 20px;
+        height: 20px;
+        background: rgba(255, 255, 255, 0.07);
+        backdrop-filter: blur(6px);
+        clip-path: polygon(100% 0, 0 100%, 100% 100%);
+        opacity: 0; /* hidden by default */
+        transition: all 0.35s ease;
+      }
+
+      /* Ear corner visible only when active */
+      .drawerTab.active::after {
+        opacity: 0.9;
+        filter: brightness(1.5);
+        background: inherit;
+      }
+
+      /* ACTIVE TAB – Semi-transparent neon */
+      .drawerTab.active {
+        background: linear-gradient(135deg, rgba(0, 255, 255, 0.5), rgba(0, 150, 150, 0.5));
+        backdrop-filter: blur(10px);
+        color: white;
+        transform: translateY(-6px);
+        box-shadow: 0 -3px 18px rgba(0, 255, 255, 0.45);
+      }
+
+      .drawerTab.active.magenta {
+        background: linear-gradient(135deg, rgba(255, 0, 255, 0.5), rgba(160, 0, 160, 0.5));
+        box-shadow: 0 -3px 18px rgba(255, 0, 255, 0.45);
+      }
+
+      /* INACTIVE TAB – Transparent glass */
+      .drawerTab.inactive {
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.2);
+      }
+
+      /* List items (songbook + queue) */
+      #songbookList div,
+      #queueList div {
+        padding: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+
+      /* Songbook hover (magenta-ish) */
+      #leftDrawer.theme-magenta #songbookList div:hover {
+        background: rgba(255, 0, 255, 0.2);
+      }
+
+      /* Queue hover (cyan-ish) */
+      #leftDrawer.theme-cyan #queueList div:hover {
+        background: rgba(0, 255, 255, 0.2);
+      }
+
+      /* Profile + Volume Row */
+      #profileVolumeSection {
+        display: flex;
+        flex-direction: column; /* profile+volume on top, logout at bottom */
+        padding: 10px 20px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #333;
+        position: relative; /* needed for absolute child positioning */
+      }
+
+      /* Row containing profile + volume */
+      #profileRow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* profile left, volume right */
+        gap: 10px;
+      }
+
+      /* Profile left */
+      #myProfileDiv {
+        min-width: 200px; /* adjust to your profile size */
+      }
+
+      /* Volume icon anchored right */
+      #myVolumeDiv {
+        min-width: 40px; /* enough for icon */
+      }
+
+      /* Logout button bottom-left */
+      #logoutBtn {
+        margin-left: 10px;
+        align-self: flex-start; /* keep left-aligned */
+      }
+
+      /* Queue item wrapper */
+      .queue-item {
+        position: relative;
+      }
+
+      /* Tab icon default*/
+      .tab-icons {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 16px;
+        color: #cccccc; /* default gray */
+        cursor: pointer;
+        opacity: 0; /* hidden until hover */
+        transition:
+          opacity 0.2s ease,
+          color 0.15s ease,
+          transform 0.1s ease;
+      }
+
+      /* Show icon only on hover */
+      .queue-item:hover .tab-icons {
+        opacity: 1;
+      }
+
+      /* Queue + Up Next icons hover red */
+      #queueList .tab-icons:hover,
+      #upNextBox .tab-icons:hover {
+        color: red;
+      }
+
+      /* Songbook icons hover cyan */
+      #songbookList .tab-icons:hover {
+        color: cyan;
+      }
+
+      /* Press animation */
+      .tab-icons:active {
+        transform: translateY(-50%) scale(0.85);
+        color: red;
+      }
+
+      /* Pop/fade-in for save/cancel */
+      .show-icon {
+        display: inline-block;
+        opacity: 0;
+        transform: scale(0.5);
+        transition:
+          opacity 0.25s ease,
+          transform 0.25s ease;
+      }
+
+      .show-icon.active {
+        opacity: 1;
+        transform: scale(1.2);
+      }
+
+      /* Bounce animation for cancel (X) */
+      @keyframes iconBounceRed {
+        0% {
+          transform: scale(1);
+          color: red;
+        }
+        50% {
+          transform: scale(0.8);
+          color: red;
+        }
+        100% {
+          transform: scale(1);
+          color: red;
+        }
+      }
+
+      .icon-bounce-red {
+        animation: iconBounceRed 320ms ease forwards;
+      }
+
+      .songItem {
+        position: relative;
+        padding-right: 30px;
+      }
+
+      /* X click press animation */
+      .icon-click {
+        transform: scale(0.85);
+        transition: transform 120ms ease-out;
+      }
+
+      /* Make UpNext wrapper behave like queue items */
+      #upNextTitle .queue-item {
+        position: relative;
+        
+      }
+
+      /* Delete animation */
+      .queue-item.delete-anim {
+        opacity: 0 !important;
+        transform: translateX(20px) !important;
+        transition:
+          opacity 0.35s ease,
+          transform 0.35s ease;
+      }
+
+      #queueList .queue-item.delete-anim {
+        transition:
+          opacity 0.35s ease,
+          transform 0.35s ease !important;
+      }
+
+      /* FOR HOVER OF TEXT (SONGBOOK GUIDE) */
+      .youtube-link {
+        color: white;
+        font-weight: bold;
+        text-decoration: underline;
+      }
+      .youtube-link:hover {
+        color: cyan;
+      }
+
+      /* Action words and URL box */
+      .action-hover {
+        background-color: #1e1e1e;
+        color: #ffffff;
+        font-weight: bold;
+        padding: 2px 4px;
+        cursor: pointer;
+        transition:
+          color 0.2s ease,
+          background-color 0.2s ease;
+      }
+      .action-hover:hover {
+        border-radius: 4px;
+        background-color: black;
+        color: cyan;
+      }
+
+      /* ===========================
+      Auth Container
+      =========================== */
+      #authContainer {
+        display: flex;
+        flex-direction: column; /* stack login/register vertically */
+        gap: 20px;
+        align-items: flex-start; /* align boxes to left of container */
+        padding: 10px 0px;
+        margin-bottom: 20px; /* small vertical spacing */
+        width: 100%; /* fill leftDrawer width */
+        font-family: Arial, sans-serif;
+        overflow-y: auto; /* scrollable if too tall */
+        max-height: calc(100vh - 80px); /* avoid overlapping topbar */
+        border-bottom: 1px solid #333;
+      }
+
+      /* Auth Boxes */
+      .auth-box {
+        display: flex;
+        flex-direction: column;
+        background: none; /* no background */
+        width: 100%; /* match container width */
+        box-sizing: border-box;
+      }
+
+      /* Title + Play Icon */
+      .auth-title {
+        display: flex;
+        align-items: center; /* vertically align title + icon */
+        gap: 8px; /* space between title and play icon */
+        font-size: 20px;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 10px;
+      }
+
+      /* Play icon (like trash icon / tab-icons) */
+      .auth-play-icon {
+        cursor: pointer;
+        color: gray;
+        font-size: 15px;
+        display: none;
+        vertical-align: middle;
+        transition:
+          color 0.2s ease,
+          transform 0.1s ease;
+        padding: 4px;
+        border-radius: 4px;
+      }
+
+      .auth-play-icon:hover,
+      .auth-play-icon:focus {
+        color: cyan;
+      }
+
+      .auth-play-icon:active {
+        transform: scale(0.9);
+      }
+
+      /* Input Row */
+      .input-row {
+        display: flex;
+        gap: 8px; /* space between inputs */
+        align-items: center; /* vertically align inputs */
+        width: 100%; /* fill container width */
+        margin-bottom: 10px;
+      }
+
+      /* Inputs */
+      .input-row input {
+        padding: 8px 10px;
+        font-size: 14px;
+        border-radius: 0px;
+        text-align: center;
+      }
+
+      /* Toggle Text */
+      .auth-toggle-text {
+        text-align: left; /* left-align inside box */
+        font-size: 13px;
+        color: gray;
+        margin-top: 4px;
+        width: 100%;
+      }
+
+      .auth-toggle-text a {
+        cursor: pointer;
+        text-decoration: none;
+        color: gray;
+        font-weight: bold;
+      }
+
+      .auth-toggle-text a:hover {
+        color: white;
+      }
+
+      /* Click animation for play/check icons */
+      .auth-play-icon.icon-pressed {
+        transform: scale(0.85);
+        transition: transform 0.15s ease;
+      }
+
+
+      /* Loading blip */
+      .loading-text::after {
+        content: "...";
+        animation: blinkDots 1s steps(4, end) infinite;
+      }
+
+      @keyframes blinkDots {
+        0%   { content: ""; }
+        25%  { content: "."; }
+        50%  { content: ".."; }
+        75%  { content: "..."; }
+        100% { content: ""; }
+      }
+      
+
+      /* Hide volume wrapper by default */
+      #myVolumeDiv > div {
+        opacity: 0;
+        pointer-events: none; /* don't interact when hidden */
+        transition: opacity 0.25s ease;
+      }
+
+      /* Show when hovering parent */
+      #profileVolumeSection:hover #myVolumeDiv > div {
+        opacity: 1;
+        pointer-events: auto; /* enable interactions */
+      }
+      
+      /* NextBox animation */
+      #upNextBox {
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 2.25s ease, transform 2.25s ease;
+        pointer-events: none;   /* prevents clicking while hidden */
+      }
+
+      #upNextBox.visible {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+      
+    </style>
+  </head>
+  <body>
+    <div id="dragOverlay"></div>
+
+    <div id="topbar">
+      <div id="hamburger" title="Menu" data-sound="clickB">&#9776;</div>
+      <div class="title">CueTube</div>
+    </div>
+
+    <!-- Left Drawer -->
+  <div id="leftDrawer">
+      <!-- Profile & Auth Section -->
+    <div id="profileVolumeSection" style="display:flex; flex-direction:column;">
+
+      <div id="loadingBlock" class="loading-text" style="display: flex; justify-content: center; align-items: center; color: white; font-size: larger; height: 107px; width: 100%;">
+        Loading
+      </div>
+
+      <!-- PROFILE + VOLUME ROW -->
+      <div id="profileRow" style="display:flex; align-items:center;">
+        <div id="myProfileDiv"></div>
+        <div title="Adjust Notif. Volume" id="myVolumeDiv"></div>
+      </div>
+
+      <!-- LOGOUT BUTTON -->
+      <p class="auth-toggle-text left-align" id="logoutBtn" style="display: none;"><a>Logout</a></p>
+    </div>
+
+      <!-- Auth Form Section (only visible when not logged in) -->
+    <section id="authContainer" style="display: flex; align-items: center; width: 100%;">
+      <!-- Login Box -->
+      <div style="padding: 0 30px;" id="loginBox" class="auth-box">
+        <div class="auth-title">
+          Login
+          <i class="auth-play-icon fa-solid fa-play" title="Login"></i>
+        </div>
+          <div class="input-row">
+            <input id="loginUsername" placeholder="Username" data-theme="cyan" />
+
+            <div class="pin-wrapper">
+              <input id="loginPin"
+                     type="password"
+                     inputmode="numeric"
+                     placeholder="4-digit PIN"
+                     maxlength="4"
+                     autocomplete="off"
+                     pattern="[0-9]*"
+                     data-theme="cyan" />
+
+                <i class="fa-solid fa-eye auth-eye-icon" data-target="loginPin"></i>
+            </div>
+          </div>
+        <p class="auth-toggle-text left-align"><a id="goRegister">Create account</a></p>
+      </div>
+
+      <!-- Register Box -->
+      <div style="padding: 0 30px; display: none;" id="registerBox" class="auth-box">
+        <div class="auth-title">
+          Register
+          <i class="auth-play-icon fa-solid fa-play" title="Register"></i>
+        </div>
+          <div class="input-row">
+            <input id="registerUsername" placeholder="Username" data-theme="cyan" />
+
+            <div class="pin-wrapper">
+              <input id="registerPin"
+                     type="password"
+                     inputmode="numeric"
+                     placeholder="4-digit PIN"
+                     maxlength="4"
+                     autocomplete="off"
+                     pattern="[0-9]*"
+                     data-theme="cyan" />
+
+                <i class="fa-solid fa-eye auth-eye-icon" data-target="registerPin"></i>
+            </div>
+          </div>
+        <p class="auth-toggle-text left-align"><a id="goLogin">Already have an account?</a></p>
+      </div>
+    </section>
+
+      <!-- Tab Buttons -->
+      <div id="drawerTabsHeader">
+        <div id="tabSongbook" class="drawerTab magenta active" data-sound="clickA">Songbook</div>
+        <div id="tabQueue" class="drawerTab cyan inactive" data-sound="clickA">Queue</div>
+      </div>
+
+      <!-- Tab Contents -->
+      <div id="drawerTabs" style="flex: 1; overflow-y: auto; color: white">
+        <!-- Search Bar (only for Songbook) -->
+        <section style="display: flex; gap: align-items: center; margin: 10px 10px 0px 10px;">
+          <input
+            type="text"
+            id="songbookSearch"
+            data-theme="magenta"
+            data-icon="search"
+            placeholder="Search songs..." />
+        </section>
+        <!-- Songbook List -->
+        <div id="songbookList" style="display: flex; flex-direction: column; gap: 5px; padding: 10px">
+          <!-- Songs will be injected here from JS -->
+        </div>
+
+        <!-- UP NEXT Title Holder -->
+        <div
+          id="upNextBox"
+          style="
+            display: none;
+            padding: 15px;
+            margin: 0px 10px;
+            background: black;
+            border-radius: 16px 0px 16px 0px;
+            color: white;
+            font-size: 14px;
+          ">
+          <div style="font-weight: bold; color: cyan">Up Next:</div>
+          <div id="upNextTitle" style="margin-top: 10px; font-size: 16px; font-weight: bold">(None)</div>
+        </div>
+
+        <!-- Queue List -->
+        <div id="queueList" style="display: none; flex-direction: column; gap: 5px; padding: 10px"></div>
+      </div>
+
+      <div id="dragHandle"></div>
+    </div>
+
+    <!-- Right Content -->
+    <div id="rightContent">
+      <div id="notif-container"></div>
+      <div id="playerWrapper">
+        <div id="ytPlayer"></div>
+      </div>
+
+      <!-- Bottom Bar -->
+        <div id="bottomBar" style="padding: 30px 15px">
+          <div id="bottomDragHandle"></div> <!-- drag handle at top -->
+
+          <!-- NOW PLAYING Title Holder -->
+          <div
+            id="nowPlayingTitle"
+            class="loading-text"
+            style="
+              display: block;
+              width: 100%;
+              text-align: left;
+              margin-bottom: 15px;
+              font-size: 20px;
+              font-weight: bold;
+            ">
+            Loading
+          </div>
+
+          <section style="display: flex; gap: 10px; align-items: center; width: 100%;">
+            <input type="text" id="songInput" title="URL Input box" placeholder="Paste song URL/link here" />
+
+            <!-- ACTION BUTTON -->
+            <div style="position: relative">
+              <button id="actionBtn" class="btn fixed-width" data-theme="cyan">Action</button>
+              <div
+                id="actionDropdown"
+                style="
+                  display: none;
+                  position: absolute;
+                  bottom: 100%;
+                  left: 50%;
+                  transform: translateX(-50%) translateY(-10px);
+                  flex-direction: column;
+                  z-index: 900;
+                  min-width: 120px;
+                  text-align: center;
+                ">
+                <button class="btn full-width" title="Reserve to Queue" data-action="reserve" data-theme="green">
+                  Reserve
+                </button>
+                <button class="btn full-width" title="Save to Songbook" data-action="save" data-theme="green">
+                  Save
+                </button>
+              </div>
+            </div>
+
+            <!-- NEXT BUTTON WITH CONFIRM DROPUP -->
+            <div style="position: relative">
+              <button id="nextSongBtn" title="Next song" class="btn fixed-width" data-theme="cyan">Next</button>
+              <div
+                id="nextConfirmDropup"
+                style="
+                  display: none;
+                  position: absolute;
+                  bottom: 100%;
+                  left: 50%;
+                  transform: translateX(-50%) translateY(-10px);
+                  flex-direction: column;
+                  z-index: 900;
+                  min-width: 120px;
+                  text-align: center;
+                ">
+                <button id="confirmNextBtn" class="btn full-width" data-theme="green">Confirm</button>
+              </div>
+            </div>
+          </section>
+        </div>
+    </div>
+
+    <!-- Generic Confirm Modal -->
+    <div id="confirmModal" class="modal" data-theme="cyan">
+      <div class="modal-content">
+        <!-- Custom X button -->
+        <button class="btnX">&times;</button>
+        <h3 id="confirmModalTitle">CONFIRM</h3>
+        <p id="confirmModalMessage">Are you sure?</p>
+
+        <div class="modal-buttons">
+          <button id="confirmModalYes" class="btn fixed-width" data-theme="cyan">Yes</button>
+          <button id="confirmModalNo" class="btn fixed-width" data-theme="cyan">No</button>
+        </div>
+      </div>
+    </div>
+
+<script type="module" src="floating-suggestions.js"></script>
+
+<script>
+  const nowPlayingTitle = document.getElementById("nowPlayingTitle");
+  const titleEl = document.querySelector("title");
+
+  function updateBrowserTitle() {
+    const song = nowPlayingTitle.textContent.trim();
+    if (song && song !== "(None)") {
+      titleEl.textContent = song + " – CueTube";
+    } else {
+      titleEl.textContent = "CueTube";
+    }
+  }
+
+  // Initial title
+  updateBrowserTitle();
+
+  // Observe changes to nowPlayingTitle
+  const observer = new MutationObserver(updateBrowserTitle);
+  observer.observe(nowPlayingTitle, { childList: true, characterData: true, subtree: true });
+</script>
+
+<script>
+  const drawer = document.getElementById("leftDrawer");
+  const dragHandle = document.getElementById("dragHandle");
+  const dragOverlay = document.getElementById("dragOverlay");
+  const playerWrapper = document.getElementById("playerWrapper");
+  const bottomBar = document.getElementById("bottomBar");
+  const bottomDragHandle = document.getElementById("bottomDragHandle");
+  const rightContent = document.getElementById("rightContent");
+  const hamburger = document.getElementById("hamburger");
+
+  let lastWidth = 250;
+  let drawerOpen = true;
+  let isDraggingLeft = false;
+
+  let isDraggingBottom = false;
+  let startY = 0;
+  let startTop = 0;
+  let boundaryTimeout = null
+
+  // ------------------------
+  // Layout function
+  // ------------------------
+  function updateLayout(forceFull = false) {
+    const screenW = window.innerWidth;
+    const screenH = window.innerHeight - 70;
+    let playerW, playerH;
+
+    if (!drawerOpen && forceFull) {
+      drawer.style.transform = `translateX(-${drawer.offsetWidth}px)`;
+      rightContent.style.left = "0";
+      rightContent.style.width = "100%";
+
+      playerW = rightContent.clientWidth;
+      playerH = (playerW * 9) / 16;
+      if (playerH > screenH * 0.9) {
+        playerH = screenH * 0.9;
+        playerW = (playerH * 16) / 9;
+      }
+    } else {
+      drawer.style.transform = "translateX(0)";
+      rightContent.style.left = drawer.offsetWidth + "px";
+      rightContent.style.width = screenW - drawer.offsetWidth + "px";
+
+      playerW = rightContent.clientWidth;
+      playerH = (playerW * 9) / 16;
+      if (playerH > screenH * 0.9) {
+        playerH = screenH * 0.9;
+        playerW = (playerH * 16) / 9;
+      }
+    }
+
+    // Apply sizes instantly
+    playerWrapper.style.width = playerW + "px";
+    playerWrapper.style.height = playerH + "px";
+    playerWrapper.style.marginLeft = "auto";
+    playerWrapper.style.marginRight = "auto";
+
+    // ------------------------
+    // Bottom bar snap-to-player logic
+    // ------------------------
+    const drawerWidth = drawerOpen ? drawer.offsetWidth : 0;
+
+    // Snap top to player bottom if not manually dragged
+    if (!bottomBar.dataset.manualTop) {
+      bottomBar.style.top = playerWrapper.getBoundingClientRect().bottom + "px";
+    }
+
+    bottomBar.style.left = drawerWidth + "px";
+    bottomBar.style.width = screenW - drawerWidth + "px";
+    bottomBar.style.bottom = "0"; // stick bottom to viewport
+  }
+
+  // Initial layout
+  updateLayout();
+  centerPlayerVertically();
+
+  // ------------------------
+  // Left drawer drag
+  // ------------------------
+  dragHandle.addEventListener("mousedown", () => {
+    if (!drawerOpen) return;
+    isDraggingLeft = true;
+    dragOverlay.style.display = "block";
+    drawer.style.transition = "none";
+    playerWrapper.style.transition = "none";
+    bottomBar.style.transition = "none";
+    dragHandle.style.background = "cyan";
+  });
+  
+  dragHandle.style.transition = "background 0.5s ease";
+  
+  // Hover effect
+  dragHandle.addEventListener("mouseenter", () => {
+    if (isDraggingLeft) return; // ignore hover while dragging
+    dragHandle.style.background = "#333"; // hover color
+  });
+
+  dragHandle.addEventListener("mouseleave", () => {
+    if (isDraggingLeft) return;
+    dragHandle.style.background = "rgba(0,0,0,0)"; // reset
+  });
+  
+  document.addEventListener("mousemove", (e) => {
+      if (!isDraggingLeft) return;
+
+    const screenW = window.innerWidth;
+    const maxDrawerWidth = screenW - screenW * 0.25;
+    let intendedWidth = Math.max(screenW * 0.3, e.clientX);
+    if (intendedWidth > maxDrawerWidth) intendedWidth = maxDrawerWidth;
+
+    dragHandle.style.background =
+      intendedWidth <= screenW * 0.3 || intendedWidth >= maxDrawerWidth ? "red" : "cyan";
+
+    drawer.style.width = intendedWidth + "px";
+    lastWidth = intendedWidth;
+    updateLayout();
+    centerPlayerVertically();
+  });
+
+document.addEventListener("mouseup", () => {
+    // ------------------------
+    // LEFT DRAWER RELEASE
+    // ------------------------
+    if (isDraggingLeft) {
+        isDraggingLeft = false;
+        dragOverlay.style.display = "none";
+        drawer.style.transition = "width 0.4s ease, transform 0.4s ease";
+        playerWrapper.style.transition = "all 0.3s ease";
+        bottomBar.style.transition = "all 0.3s ease";
+        dragHandle.style.background = "rgba(0, 0, 0, 0)"; // reset color
+    }
+
+    // ------------------------
+    // BOTTOM BAR RELEASE
+    // ------------------------
+    if (isDraggingBottom) {
+        isDraggingBottom = false;
+
+        // Clear any pending boundary timeout
+        if (boundaryTimeout) {
+            clearTimeout(boundaryTimeout);
+            boundaryTimeout = null;
+        }
+
+        // Reset bottom handle style
+        bottomDragHandle.style.background = "rgba(0,0,0,0)";
+        bottomDragHandle.style.transition = "background 0.5s ease";
+
+        // Re-enable text selection
+        document.body.style.userSelect = "";
+    }
+});
+
+  // ------------------------
+  // Hamburger toggle
+  // ------------------------
+  hamburger.addEventListener("click", () => {
+    drawerOpen = !drawerOpen;
+    updateLayout(!drawerOpen);
+    centerPlayerVertically(); // force full width when closing
+  });
+
+  // Window resize
+  window.addEventListener("resize", () => {
+  updateLayout();
+  centerPlayerVertically();
+});
+
+
+  // ------------------------
+  // Bottom bar vertical drag with limit warning + auto-release on boundary
+  // ------------------------
+  // Initial handle style
+  bottomDragHandle.style.position = "absolute";
+  bottomDragHandle.style.top = "0"; // stick to top of bottomBar
+  bottomDragHandle.style.cursor = "ns-resize";
+  bottomDragHandle.style.background = "rgba(0, 0, 0, 0)"; // original color
+
+  bottomDragHandle.style.transition = "background 0.5s ease";
+  
+  bottomDragHandle.addEventListener("mouseenter", () => {
+    if (isDraggingBottom) return; // ignore hover while dragging
+    bottomDragHandle.style.background = "#404040"; // gray hover
+  });
+
+  bottomDragHandle.addEventListener("mouseleave", () => {
+    if (isDraggingBottom) return; // ignore hover while dragging
+    bottomDragHandle.style.background = "rgba(0, 0, 0, 0)";
+  });
+
+  bottomDragHandle.addEventListener("mousedown", e => {
+    isDraggingBottom = true;
+    startY = e.clientY;
+    startTop = parseInt(bottomBar.style.top) || bottomBar.getBoundingClientRect().top;
+    bottomBar.dataset.manualTop = "true"; // mark manual drag
+
+    // Disable text selection while dragging
+    document.body.style.userSelect = "none";
+
+    // Highlight handle while dragging
+    bottomDragHandle.style.background = "cyan";
+    centerPlayerVertically();
+  });
+
+document.addEventListener("mousemove", e => {
+
+  if (!isDraggingBottom) return;
+
+  let dy = e.clientY - startY;
+  let newTop = startTop + dy;
+
+  const rightTop = rightContent.getBoundingClientRect().top;
+  const playerHeight = playerWrapper.offsetHeight;
+
+  // Dynamic UPWARD max limit (YT top reaches topbar)
+  const MIN_PLAYER_HEIGHT = 250;
+  
+  const maxUp = rightTop + MIN_PLAYER_HEIGHT;
+
+  // DOWNWARD limit
+  const maxDown = window.innerHeight - 140;
+
+  let hitLimit = false;
+
+  if (newTop < maxUp) {
+      newTop = maxUp;
+      hitLimit = true;
+  }
+
+  if (newTop > maxDown) {
+      newTop = maxDown;
+      hitLimit = true;
+  }
+
+  bottomBar.style.top = newTop + "px";
+  bottomBar.style.height = window.innerHeight - newTop + "px";
+
+  if (hitLimit) {
+      bottomDragHandle.style.background = "red";
+
+      if (!boundaryTimeout) {
+        boundaryTimeout = setTimeout(() => {
+          isDraggingBottom = false;
+          document.body.style.userSelect = "";
+          bottomDragHandle.style.background = "rgba(0,0,0,0)";
+          boundaryTimeout = null;
+        }, 500);
+      }
+  } else {
+      bottomDragHandle.style.background = "cyan";
+
+      if (boundaryTimeout) {
+        clearTimeout(boundaryTimeout);
+        boundaryTimeout = null;
+      }
+  }
+
+  centerPlayerVertically();
+});
+
+
+function centerPlayerVertically() {
+    const MIN_PLAYER_HEIGHT = 200;
+
+    const rightTop = rightContent.getBoundingClientRect().top;
+    const bottomTop = bottomBar.getBoundingClientRect().top;
+
+    const availableHeight = bottomTop - rightTop;
+
+    let playerW = rightContent.clientWidth;
+    let playerH = (playerW * 9) / 16;
+
+    // Fit to available height
+    if (playerH > availableHeight) {
+        playerH = availableHeight * 0.9;
+        playerW = (playerH * 16) / 9;
+    }
+
+    // Enforce minimum height
+    if (playerH < MIN_PLAYER_HEIGHT) {
+        playerH = MIN_PLAYER_HEIGHT;
+        playerW = (playerH * 16) / 9;
+    }
+
+    playerWrapper.style.width = playerW + "px";
+    playerWrapper.style.height = playerH + "px";
+
+    // Center vertically
+    const offset = (availableHeight - playerH) / 2;
+    playerWrapper.style.marginTop = offset + "px";
+}
+</script>
+
+    <script type="module">
+      import { createScoreModal, showScore } from "./ui/ui-score.js";
+
+      // Create modal once
+      createScoreModal("scoreModal");
+
+      // Show modal on click
+      document.getElementById("showScoreBtn").addEventListener("click", () => {
+        showScore("scoreModal");
+      });
+    </script>
+
+    <script>
+      const tabSongbook = document.getElementById("tabSongbook");
+      const tabQueue = document.getElementById("tabQueue");
+
+      // Correct panels
+      const panelSongbook = document.getElementById("songbookList");
+      const panelQueue = document.getElementById("queueList");
+      const searchBar = document.getElementById("songbookSearch");
+      const upNext = document.getElementById("upNextBox");
+
+      tabSongbook.addEventListener("click", () => {
+        // button visuals
+        tabSongbook.classList.add("active");
+        tabSongbook.classList.remove("inactive");
+        tabQueue.classList.remove("active");
+        tabQueue.classList.add("inactive");
+
+        // correct panels
+        panelSongbook.style.display = "flex";
+        panelQueue.style.display = "none";
+
+        // show songbook-only UI
+        searchBar.style.display = "block";
+        upNext.style.display = "none";
+      });
+
+      tabQueue.addEventListener("click", () => {
+        tabQueue.classList.add("active");
+        tabQueue.classList.remove("inactive");
+
+        tabSongbook.classList.remove("active");
+        tabSongbook.classList.add("inactive");
+
+        panelSongbook.style.display = "none";
+        panelQueue.style.display = "flex";
+
+        // hide songbook-only UI
+        searchBar.style.display = "none";
+        upNext.style.display = "block";
+      });
+    </script>
+
+    <!-- Authentication -->
+    <script type="module" src="./auth.js"></script>
+
+    <!-- UI modules -->
+    <script type="module" src="ui/ui-buttons.js"></script>
+    <script type="module" src="ui/ui-modals.js"></script>
+    <script type="module" src="ui/ui-popups.js"></script>
+    <script type="module" src="ui/ui-inputs.js"></script>
+    <script type="module" src="ui/ui-score.js"></script>
+    <script type="module" src="ui/ui-notification.js"></script>
+
+    <!-- Main functionality -->
+    <script type="module" src="main.js"></script>
+
+    <!-- Songbook + Queue -->
+    <script type="module" src="songbook.js"></script>
+    <script type="module" src="queue.js"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+    <!-- Profile & Volume -->
+    <script type="module">
+      import { createProfile } from "./profile.js";
+      import { createVolumeIcon } from "./sounds.js";
+
+      window.addEventListener("DOMContentLoaded", () => {
+        createProfile(document.getElementById("myProfileDiv"));
+        createVolumeIcon(document.getElementById("myVolumeDiv"));
+      });
+
+      <!-- Vol. hover -->
+        const profileSection = document.getElementById("profileVolumeSection");
+        const volumeDiv = document.getElementById("myVolumeDiv");
+
+        profileSection.addEventListener("mouseenter", () => {
+          if (volumeDiv.firstChild) {
+            volumeDiv.firstChild.style.opacity = "1";
+          }
+        });
+
+        profileSection.addEventListener("mouseleave", () => {
+          if (volumeDiv.firstChild) {
+            volumeDiv.firstChild.style.opacity = "0";
+          }
+        });
+    </script>
+  </body>
+</html>
