@@ -1,0 +1,121 @@
+App structure:
+
+/CueTube/
+├── index.html            <- main HTML
+├── main.js               <- Firebase + app logic
+├── ui-buttons.js         <- universal buttons + click sounds
+├── ui-modals.js          <- modals logic
+├── ui-popups.js          <- notifications + sounds
+├── firebase-config.js    <- Firebase setup
+├── sounds.js             <- all .wav sound effects
+├── css/
+│   └── styles.css        <- global CSS (neon theme)
+└── assets/
+    ├── images/           <- all your .png icons
+    └── audio/            <- all your .wav sounds
+
+
+//////////////////////////////////////////
+How to use all modules together:
+main.js will handle Firebase logic: uploading videos, fetching data, authentication, etc.
+Buttons, modals, and popups are already reusable and independent.
+
+
+<script src="firebase-config.js"></script>
+<script src="ui-buttons.js"></script>
+<script src="ui-modals.js"></script>
+<script src="ui-popups.js"></script>
+<script src="main.js"></script>
+
+
+/////////////////////////////////////////
+Universal buttons (ui-buttons.js)
+two classes:
+        class="btnX"    >   for Modal "X" buttons (x symbol=(&times))
+        class="btn"     >   for Normal buttons
+
+adjusting the Width and Color of the button class="btn":
+        WIDTH   >    class="(fixed/full)-width"
+        COLOR   >    data-theme="(cyan/magenta/etc.)"
+ex:
+<!-- Fixed width button (150px) -->
+<button class="btn fixed-width" data-theme="cyan">Play</button>
+
+<!-- Full width button -->
+<button class="btn full-width" data-theme="magenta">Next</button>
+
+<!-- Using hex color directly -->
+<button class="btn full-width" data-theme="#FF8800">Upload</button>
+
+<!-- Another fixed width -->
+<button class="btn fixed-width" data-theme="yellow">Save</button>
+
+how to add New COLORS:
+just search this part and add colors (ui-buttons.js):
+
+    // Read theme color from data-theme
+    const themeAttr = btn.dataset.theme || "#0ff"; // default cyan
+    const namedColors = {
+      cyan: "#0ff",
+      magenta: "#ff00ff",
+      yellow: "#ff0",
+      green: "#0f0",
+      red: "#f00"
+    };
+
+///////////////////////////////////////////
+universal modals (ui-modals.js)
+adjusting the Color of the modal:
+        COLOR   >    data-theme="(cyan/magenta/etc.)"
+ex:
+<div id="deleteConfirm" class="modal" data-theme="cyan">
+  <div class="modal-content">
+    <!-- Custom X button -->
+    <button class="btnX">&times;</button>
+    <h3> DELETE?</h3>
+    <p>Are you sure you want to delete this song?</p>
+
+    <div class="modal-buttons">
+      <button class="btn fixed-width" data-theme="cyan">Yes</button>
+      <button class="btn fixed-width" data-theme="cyan">No</button>
+    </div>
+  </div>
+</div>
+
+///////////////////////////////////////////
+Universal Notification System (ui-notification.js)
+   Usage: <div id="notif-container"></div>
+   note: make sure the parent position: relative;
+
+///////////////////////////////////////////
+Universal Sound Manager (Sounds.js)
+   Usage:
+
+   Click sound:
+      <button data-sound="click">Save</button>
+
+   Custom event:
+      <div data-sound="notification" data-event="mouseenter">
+
+   Hover sound:
+      <div data-sound-hover="hover">
+
+   Manual:
+      playSound("error");
+
+   Volume control:
+      setVolume(0.5);  // 0 to 1
+      muteSounds(true);
+
+   Placing Volume Icon:
+      <div id="myVolumeDiv"></div>
+
+guide for
+New version of:
+
+firebase-init.js: handles data logic only (Firestore, login/register, songbook, queue).
+
+auth.js: handles UI logic only (forms, buttons, spinners, popups).
+
+main.js: handles global app state and reacting to events.
+

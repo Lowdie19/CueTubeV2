@@ -1,0 +1,9 @@
+ cyan: "#00ffff",
+ magenta: "#ff00ff",
+ yellow: "#ffff00",
+ green: "#00ff00",
+ red: "#ff0000",
+ blue: "#0099ff",
+  white: "#ffffff"
+
+if70 - 80 90 95 100 100
