@@ -148,7 +148,7 @@
         right: 0;
         bottom: 0; /* stick to bottom of window */
         /* remove fixed height */
-        background: #222;
+        background: black;
         color: white;
         padding: 30px 15px;
         box-sizing: border-box;
@@ -632,6 +632,59 @@
         50% { transform: rotate(15deg); }
       }
 </style>
+  
+  
+  
+<style>
+@media screen and (max-width: 1024px) and (orientation: landscape) {
+    #topbar {
+        display: none !important;
+      }
+  
+    #rightContent,
+    #leftDrawer {
+        top: 0px !important;
+      }
+  
+    .hidden {
+      display: none !important;
+    }
+  
+    #hamburger:hover {
+      background: none!important;
+    }
+    #hamburger {
+      transition: transform 0.1s ease, background 0.1s ease;
+    }
+    #hamburger:active {
+      transform: scale(0.8);
+      background: rgba(255,255,255,0.2);
+    }
+    #btnShowHide {
+      display: block !important;
+    }
+  
+    #profileVolumeSection:hover, #myVolumeDiv > div {
+      margin-left: auto !important;
+      opacity: 1 !important;
+    }
+    #profileVolumeSection, #profileRow {
+      gap: 0px!important;
+      width: 100%!important;
+      box-sizing: border-box!important;
+    }
+    #myProfileDiv > div {
+      padding: 0px 0px 12px 0px!important;
+    }
+    #profileVolumeSection {
+      padding: 0px 10px!important;
+    }
+    #authContainer {
+      padding: 0px 0px 10px 0px!important;
+    }
+  
+</style>
+
 
 
   </head>
@@ -657,6 +710,12 @@
 
     <!-- Left Drawer -->
   <div id="leftDrawer">
+    
+    <i id="btnShowHide" class="fa-solid fa-chevron-up" 
+       title="Toggle Login/Profile"
+       style="padding: 14px; text-align: right; cursor: pointer; color: gray; font-size: 20px; display: none;">
+    </i>
+    
       <!-- Profile & Auth Section -->
     <div id="profileVolumeSection" style="display:flex; flex-direction:column;">
 
@@ -866,21 +925,42 @@
 
 
 <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const mobileRegLogBtn = document.getElementById("btnShowHide");
+  const loginBox = document.querySelector("#loginBox.auth-box");
+  const profileVolume = document.getElementById("profileVolumeSection");
+
+  mobileRegLogBtn.addEventListener("click", () => {
+    const isHidden = loginBox.classList.toggle("hidden");
+    profileVolume.classList.toggle("hidden");
+
+    // Toggle chevron
+    if (isHidden) {
+      mobileRegLogBtn.classList.remove("fa-chevron-up");
+      mobileRegLogBtn.classList.add("fa-chevron-down");
+    } else {
+      mobileRegLogBtn.classList.remove("fa-chevron-down");
+      mobileRegLogBtn.classList.add("fa-chevron-up");
+    }
+  });
+});
+</script>
+
+
+<script>
     function checkOrientation() {
       const warning = document.getElementById("rotateWarning");
       const isMobile = window.innerWidth <= 1024; // only mobile
       const isPortrait = window.innerHeight > window.innerWidth;
       
       if (isMobile && isPortrait) {
-        // show warning
         warning.style.display = "flex";
-        document.querySelectorAll("body > *:not(#rotateWarning)").forEach(el => {
+        document.querySelectorAll("body > *:not(#rotateWarning), #topbar").forEach(el => {
           el.style.display = "none";
         });
       } else {
-        // hide warning
         warning.style.display = "none";
-        document.querySelectorAll("body > *:not(#rotateWarning)").forEach(el => {
+        document.querySelectorAll("body > *:not(#rotateWarning), #topbar").forEach(el => {
           el.style.display = "";
         });
       }
