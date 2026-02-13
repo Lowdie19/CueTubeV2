@@ -129,6 +129,7 @@
         justify-content: center;
         align-items: center;
         background: #000;
+        transition: width 0.35s ease, height 0.35s ease, margin-top 0.35s ease;
       }
 
       /* YouTube player */
@@ -154,6 +155,16 @@
         /*overflow: hidden;*/
         display: flex;
         flex-direction: column;
+        
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity 0.35s ease, transform 0.35s ease;
+      }
+
+      #bottomBar.hidden {
+        opacity: 0;
+        transform: translateY(20px);
+        pointer-events: none;
       }
 
       #bottomDragHandle {
@@ -589,14 +600,58 @@
         transform: translateY(0);
         pointer-events: auto;
       }
-      
-    </style>
+
+
+
+      /* ROTATE WARNING STYLES */
+      #rotateWarning {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #000;
+        color: white;
+        display: none; /* hidden by default */
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        z-index: 999999;
+        text-align: center;
+        padding: 20px;
+      }
+
+      .rotate-icon {
+        margin-bottom: 20px;
+        animation: rotateBounce 1.2s ease-in-out infinite;
+      }
+
+      @keyframes rotateBounce {
+        0%, 100% { transform: rotate(0deg); }
+        50% { transform: rotate(15deg); }
+      }
+</style>
+
+
   </head>
   <body>
+    
+    <!-- Rotate Warning Overlay -->
+    <div id="rotateWarning">
+      <div class="rotate-icon">
+        <i class="fa-solid fa-rotate fa-3x"></i>
+      </div>
+      <div class="warning-text">
+        Please rotate your device to <b>LANDSCAPE</b> to use CueTube.
+      </div>
+    </div>
+    
     <div id="dragOverlay"></div>
 
+    <div id="hamburger" title="Menu" data-sound="clickB">&#9776;</div>
+    
     <div id="topbar">
-      <div id="hamburger" title="Menu" data-sound="clickB">&#9776;</div>
       <div class="title">CueTube</div>
     </div>
 
@@ -744,7 +799,7 @@
           </div>
 
           <section style="display: flex; gap: 10px; align-items: center; width: 100%;">
-            <input type="text" id="songInput" title="URL Input box" placeholder="Paste song URL/link here" />
+            <input type="text" id="songInput" title="Input box" placeholder="Paste song URL / link here" />
 
             <!-- ACTION BUTTON -->
             <div style="position: relative">
@@ -809,12 +864,40 @@
       </div>
     </div>
 
+
+<script>
+    function checkOrientation() {
+      const warning = document.getElementById("rotateWarning");
+      const isMobile = window.innerWidth <= 1024; // only mobile
+      const isPortrait = window.innerHeight > window.innerWidth;
+      
+      if (isMobile && isPortrait) {
+        // show warning
+        warning.style.display = "flex";
+        document.querySelectorAll("body > *:not(#rotateWarning)").forEach(el => {
+          el.style.display = "none";
+        });
+      } else {
+        // hide warning
+        warning.style.display = "none";
+        document.querySelectorAll("body > *:not(#rotateWarning)").forEach(el => {
+          el.style.display = "";
+        });
+      }
+    }
+    
+    // Run on load and resize
+    checkOrientation();
+    window.addEventListener("resize", checkOrientation);
+</script>
+
+
 <script type="module" src="floating-suggestions.js"></script>
 
 <script>
   const nowPlayingTitle = document.getElementById("nowPlayingTitle");
   const titleEl = document.querySelector("title");
-
+  
   function updateBrowserTitle() {
     const song = nowPlayingTitle.textContent.trim();
     if (song && song !== "(None)") {
@@ -823,10 +906,10 @@
       titleEl.textContent = "CueTube";
     }
   }
-
+  
   // Initial title
   updateBrowserTitle();
-
+  
   // Observe changes to nowPlayingTitle
   const observer = new MutationObserver(updateBrowserTitle);
   observer.observe(nowPlayingTitle, { childList: true, characterData: true, subtree: true });
@@ -841,16 +924,16 @@
   const bottomDragHandle = document.getElementById("bottomDragHandle");
   const rightContent = document.getElementById("rightContent");
   const hamburger = document.getElementById("hamburger");
-
+  
   let lastWidth = 250;
   let drawerOpen = true;
   let isDraggingLeft = false;
-
+  
   let isDraggingBottom = false;
   let startY = 0;
   let startTop = 0;
   let boundaryTimeout = null
-
+  
   // ------------------------
   // Layout function
   // ------------------------
@@ -858,12 +941,12 @@
     const screenW = window.innerWidth;
     const screenH = window.innerHeight - 70;
     let playerW, playerH;
-
+    
     if (!drawerOpen && forceFull) {
       drawer.style.transform = `translateX(-${drawer.offsetWidth}px)`;
       rightContent.style.left = "0";
       rightContent.style.width = "100%";
-
+      
       playerW = rightContent.clientWidth;
       playerH = (playerW * 9) / 16;
       if (playerH > screenH * 0.9) {
@@ -874,7 +957,7 @@
       drawer.style.transform = "translateX(0)";
       rightContent.style.left = drawer.offsetWidth + "px";
       rightContent.style.width = screenW - drawer.offsetWidth + "px";
-
+      
       playerW = rightContent.clientWidth;
       playerH = (playerW * 9) / 16;
       if (playerH > screenH * 0.9) {
@@ -882,32 +965,32 @@
         playerW = (playerH * 16) / 9;
       }
     }
-
+    
     // Apply sizes instantly
     playerWrapper.style.width = playerW + "px";
     playerWrapper.style.height = playerH + "px";
     playerWrapper.style.marginLeft = "auto";
     playerWrapper.style.marginRight = "auto";
-
+    
     // ------------------------
     // Bottom bar snap-to-player logic
     // ------------------------
     const drawerWidth = drawerOpen ? drawer.offsetWidth : 0;
-
+    
     // Snap top to player bottom if not manually dragged
     if (!bottomBar.dataset.manualTop) {
       bottomBar.style.top = playerWrapper.getBoundingClientRect().bottom + "px";
     }
-
+    
     bottomBar.style.left = drawerWidth + "px";
     bottomBar.style.width = screenW - drawerWidth + "px";
     bottomBar.style.bottom = "0"; // stick bottom to viewport
   }
-
+  
   // Initial layout
   updateLayout();
   centerPlayerVertically();
-
+  
   // ------------------------
   // Left drawer drag
   // ------------------------
@@ -936,22 +1019,22 @@
   
   document.addEventListener("mousemove", (e) => {
       if (!isDraggingLeft) return;
-
+    
     const screenW = window.innerWidth;
     const maxDrawerWidth = screenW - screenW * 0.25;
     let intendedWidth = Math.max(screenW * 0.3, e.clientX);
     if (intendedWidth > maxDrawerWidth) intendedWidth = maxDrawerWidth;
-
+    
     dragHandle.style.background =
       intendedWidth <= screenW * 0.3 || intendedWidth >= maxDrawerWidth ? "red" : "cyan";
-
+    
     drawer.style.width = intendedWidth + "px";
     lastWidth = intendedWidth;
     updateLayout();
     centerPlayerVertically();
   });
-
-document.addEventListener("mouseup", () => {
+  
+  document.addEventListener("mouseup", () => {
     // ------------------------
     // LEFT DRAWER RELEASE
     // ------------------------
@@ -963,44 +1046,87 @@ document.addEventListener("mouseup", () => {
         bottomBar.style.transition = "all 0.3s ease";
         dragHandle.style.background = "rgba(0, 0, 0, 0)"; // reset color
     }
-
+    
     // ------------------------
     // BOTTOM BAR RELEASE
     // ------------------------
     if (isDraggingBottom) {
         isDraggingBottom = false;
-
+      
         // Clear any pending boundary timeout
         if (boundaryTimeout) {
             clearTimeout(boundaryTimeout);
             boundaryTimeout = null;
         }
-
+      
         // Reset bottom handle style
         bottomDragHandle.style.background = "rgba(0,0,0,0)";
         bottomDragHandle.style.transition = "background 0.5s ease";
-
+      
         // Re-enable text selection
         document.body.style.userSelect = "";
     }
 });
+  
+
+// ------------------------------
+// DEFAULT HEIGHT FUNCTION
+// ------------------------------
+function setDefaultBottomBarHeight() {
+  const offset = 140; // minimum space from top
+  const maxDown = window.innerHeight - offset;
+
+  // Reset manual drag flag
+  bottomBar.dataset.manualTop = "";
+
+  // Position and height
+  bottomBar.style.top = maxDown + "px";
+  bottomBar.style.height = (window.innerHeight - maxDown) + "px";
+
+  // Right content adjusts to bottomBar
+  rightContent.style.bottom = bottomBar.style.height;
+
+  // Re-center the player vertically
+  centerPlayerVertically();
+}
+
+// ------------------------------
+// INITIAL LOAD
+// ------------------------------
+window.addEventListener("DOMContentLoaded", setDefaultBottomBarHeight);
+
+// ------------------------------
+// WINDOW RESIZE
+// ------------------------------
+window.addEventListener("resize", setDefaultBottomBarHeight);
+
+
 
   // ------------------------
   // Hamburger toggle
   // ------------------------
   hamburger.addEventListener("click", () => {
     drawerOpen = !drawerOpen;
-    updateLayout(!drawerOpen);
-    centerPlayerVertically(); // force full width when closing
-  });
 
+    // Slide/fade bottom bar instead of instant show/hide
+    if (drawerOpen) {
+      bottomBar.classList.remove("hidden");
+    } else {
+      bottomBar.classList.add("hidden");
+    }
+    
+    updateLayout(!drawerOpen);
+    centerPlayerVertically();
+    setDefaultBottomBarHeight();
+  });
+  
   // Window resize
   window.addEventListener("resize", () => {
   updateLayout();
   centerPlayerVertically();
-});
-
-
+  });
+  
+  
   // ------------------------
   // Bottom bar vertical drag with limit warning + auto-release on boundary
   // ------------------------
@@ -1021,57 +1147,57 @@ document.addEventListener("mouseup", () => {
     if (isDraggingBottom) return; // ignore hover while dragging
     bottomDragHandle.style.background = "rgba(0, 0, 0, 0)";
   });
-
+  
   bottomDragHandle.addEventListener("mousedown", e => {
     isDraggingBottom = true;
     startY = e.clientY;
     startTop = parseInt(bottomBar.style.top) || bottomBar.getBoundingClientRect().top;
     bottomBar.dataset.manualTop = "true"; // mark manual drag
-
+    
     // Disable text selection while dragging
     document.body.style.userSelect = "none";
-
+    
     // Highlight handle while dragging
     bottomDragHandle.style.background = "cyan";
     centerPlayerVertically();
   });
-
-document.addEventListener("mousemove", e => {
-
+  
+  document.addEventListener("mousemove", e => {
+  
   if (!isDraggingBottom) return;
-
+    
   let dy = e.clientY - startY;
   let newTop = startTop + dy;
-
+    
   const rightTop = rightContent.getBoundingClientRect().top;
   const playerHeight = playerWrapper.offsetHeight;
-
+    
   // Dynamic UPWARD max limit (YT top reaches topbar)
   const MIN_PLAYER_HEIGHT = 250;
   
   const maxUp = rightTop + MIN_PLAYER_HEIGHT;
-
+    
   // DOWNWARD limit
   const maxDown = window.innerHeight - 140;
-
+    
   let hitLimit = false;
-
+    
   if (newTop < maxUp) {
       newTop = maxUp;
       hitLimit = true;
   }
-
+    
   if (newTop > maxDown) {
       newTop = maxDown;
       hitLimit = true;
   }
-
+    
   bottomBar.style.top = newTop + "px";
   bottomBar.style.height = window.innerHeight - newTop + "px";
-
+    
   if (hitLimit) {
       bottomDragHandle.style.background = "red";
-
+    
       if (!boundaryTimeout) {
         boundaryTimeout = setTimeout(() => {
           isDraggingBottom = false;
@@ -1082,153 +1208,165 @@ document.addEventListener("mousemove", e => {
       }
   } else {
       bottomDragHandle.style.background = "cyan";
-
+    
       if (boundaryTimeout) {
         clearTimeout(boundaryTimeout);
         boundaryTimeout = null;
       }
   }
-
+    
   centerPlayerVertically();
-});
-
-
+  });
+  
+  
 function centerPlayerVertically() {
-    const MIN_PLAYER_HEIGHT = 200;
+  const rightTop = rightContent.getBoundingClientRect().top;
 
-    const rightTop = rightContent.getBoundingClientRect().top;
-    const bottomTop = bottomBar.getBoundingClientRect().top;
+  // If bottomBar is hidden via class 'hidden', use viewport bottom
+  const bottomTop = bottomBar.classList.contains("hidden")
+                    ? window.innerHeight
+                    : bottomBar.getBoundingClientRect().top;
 
-    const availableHeight = bottomTop - rightTop;
+  const availableHeight = bottomTop - rightTop;
 
-    let playerW = rightContent.clientWidth;
-    let playerH = (playerW * 9) / 16;
+  let playerW = rightContent.clientWidth;
+  let playerH = (playerW * 9) / 16; // 16:9 ratio
 
-    // Fit to available height
-    if (playerH > availableHeight) {
-        playerH = availableHeight * 0.9;
-        playerW = (playerH * 16) / 9;
-    }
+  // Fit to available height
+  if (playerH > availableHeight) {
+      playerH = availableHeight * 0.9; // leave some padding
+      playerW = (playerH * 16) / 9;
+  }
 
-    // Enforce minimum height
-    if (playerH < MIN_PLAYER_HEIGHT) {
-        playerH = MIN_PLAYER_HEIGHT;
-        playerW = (playerH * 16) / 9;
-    }
+  const MIN_PLAYER_HEIGHT = 200;
+  if (playerH < MIN_PLAYER_HEIGHT) {
+      playerH = MIN_PLAYER_HEIGHT;
+      playerW = (playerH * 16) / 9;
+  }
 
-    playerWrapper.style.width = playerW + "px";
-    playerWrapper.style.height = playerH + "px";
+  playerWrapper.style.width = playerW + "px";
+  playerWrapper.style.height = playerH + "px";
 
-    // Center vertically
-    const offset = (availableHeight - playerH) / 2;
-    playerWrapper.style.marginTop = offset + "px";
+  // Center vertically in available space
+  const offset = (availableHeight - playerH) / 2;
+  playerWrapper.style.marginTop = offset + "px";
 }
 </script>
 
-    <script type="module">
-      import { createScoreModal, showScore } from "./ui/ui-score.js";
 
+
+<script type="module">
+      import { createScoreModal, showScore } from "./ui/ui-score.js";
+      
       // Create modal once
       createScoreModal("scoreModal");
-
+      
       // Show modal on click
       document.getElementById("showScoreBtn").addEventListener("click", () => {
         showScore("scoreModal");
       });
-    </script>
+</script>
 
-    <script>
+
+<script>
       const tabSongbook = document.getElementById("tabSongbook");
       const tabQueue = document.getElementById("tabQueue");
-
+   
       // Correct panels
       const panelSongbook = document.getElementById("songbookList");
       const panelQueue = document.getElementById("queueList");
       const searchBar = document.getElementById("songbookSearch");
       const upNext = document.getElementById("upNextBox");
-
+   
       tabSongbook.addEventListener("click", () => {
         // button visuals
         tabSongbook.classList.add("active");
         tabSongbook.classList.remove("inactive");
         tabQueue.classList.remove("active");
         tabQueue.classList.add("inactive");
-
+        
         // correct panels
         panelSongbook.style.display = "flex";
         panelQueue.style.display = "none";
-
+        
         // show songbook-only UI
         searchBar.style.display = "block";
         upNext.style.display = "none";
       });
-
+   
       tabQueue.addEventListener("click", () => {
         tabQueue.classList.add("active");
         tabQueue.classList.remove("inactive");
-
+        
         tabSongbook.classList.remove("active");
         tabSongbook.classList.add("inactive");
-
+        
         panelSongbook.style.display = "none";
         panelQueue.style.display = "flex";
-
+        
         // hide songbook-only UI
         searchBar.style.display = "none";
         upNext.style.display = "block";
       });
-    </script>
+</script>
 
-    <!-- Authentication -->
-    <script type="module" src="./auth.js"></script>
 
-    <!-- UI modules -->
-    <script type="module" src="ui/ui-buttons.js"></script>
-    <script type="module" src="ui/ui-modals.js"></script>
-    <script type="module" src="ui/ui-popups.js"></script>
-    <script type="module" src="ui/ui-inputs.js"></script>
-    <script type="module" src="ui/ui-score.js"></script>
-    <script type="module" src="ui/ui-notification.js"></script>
+<!-- Authentication -->
+<script type="module" src="./auth.js"></script>
 
-    <!-- Main functionality -->
-    <script type="module" src="main.js"></script>
 
-    <!-- Songbook + Queue -->
-    <script type="module" src="songbook.js"></script>
-    <script type="module" src="queue.js"></script>
+<!-- UI modules -->
+<script type="module" src="ui/ui-buttons.js"></script>
+<script type="module" src="ui/ui-modals.js"></script>
+<script type="module" src="ui/ui-popups.js"></script>
+<script type="module" src="ui/ui-inputs.js"></script>
+<script type="module" src="ui/ui-score.js"></script>
+<script type="module" src="ui/ui-notification.js"></script>
 
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
 
-    <!-- Profile & Volume -->
-    <script type="module">
-      import { createProfile } from "./profile.js";
-      import { createVolumeIcon } from "./sounds.js";
+<!-- Main functionality -->
+<script type="module" src="main.js"></script>
 
-      window.addEventListener("DOMContentLoaded", () => {
-        createProfile(document.getElementById("myProfileDiv"));
-        createVolumeIcon(document.getElementById("myVolumeDiv"));
-      });
 
-      <!-- Vol. hover -->
-        const profileSection = document.getElementById("profileVolumeSection");
-        const volumeDiv = document.getElementById("myVolumeDiv");
+<!-- Songbook + Queue -->
+<script type="module" src="songbook.js"></script>
+<script type="module" src="queue.js"></script>
 
-        profileSection.addEventListener("mouseenter", () => {
-          if (volumeDiv.firstChild) {
-            volumeDiv.firstChild.style.opacity = "1";
-          }
-        });
 
-        profileSection.addEventListener("mouseleave", () => {
-          if (volumeDiv.firstChild) {
-            volumeDiv.firstChild.style.opacity = "0";
-          }
-        });
-    </script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+
+<!-- Profile & Volume -->
+<script type="module">
+  import { createProfile } from "./profile.js";
+  import { createVolumeIcon } from "./sounds.js";
+  
+  window.addEventListener("DOMContentLoaded", () => {
+    createProfile(document.getElementById("myProfileDiv"));
+    createVolumeIcon(document.getElementById("myVolumeDiv"));
+  });
+  
+  <!-- Vol. hover -->
+    const profileSection = document.getElementById("profileVolumeSection");
+    const volumeDiv = document.getElementById("myVolumeDiv");
+  
+    profileSection.addEventListener("mouseenter", () => {
+      if (volumeDiv.firstChild) {
+        volumeDiv.firstChild.style.opacity = "1";
+      }
+    });
+  
+    profileSection.addEventListener("mouseleave", () => {
+      if (volumeDiv.firstChild) {
+        volumeDiv.firstChild.style.opacity = "0";
+      }
+    });
+</script>
+
   </body>
 </html>
