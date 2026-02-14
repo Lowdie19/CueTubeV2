@@ -1,4 +1,19 @@
 export function initCustomKeyboard() {
+
+  // ----------------------------------
+  // MOBILE CHECK (only phones/tablets)
+  // ----------------------------------
+  const isMobile =
+    /android|iphone|ipad|ipod|opera mini|iemobile|wpdesktop/i.test(navigator.userAgent) ||
+    window.matchMedia("(max-width: 1024px)").matches;
+
+  if (!isMobile) {
+    console.log("Custom keyboard disabled — desktop mode");
+    return;
+  }
+
+  console.log("Custom keyboard enabled — mobile detected");
+
   // ------------------- Create keyboard -------------------
   const kb = document.createElement('div');
   kb.id = 'customKeyboard';
@@ -103,15 +118,13 @@ export function initCustomKeyboard() {
   buildKeyboard(currentLayout);
 
   // ------------------- Show keyboard -------------------
-  // Attach to all inputs, disable native keyboard
   document.querySelectorAll('input').forEach(input => {
     input.addEventListener('pointerdown', e => {
-      e.preventDefault(); // disable native keyboard
+      e.preventDefault();
       activeInput = e.target;
 
-      // Disable native mobile keyboard
       activeInput.setAttribute('inputmode', 'none');
-      activeInput.removeAttribute('readonly'); // keep cursor visible
+      activeInput.removeAttribute('readonly');
 
       if (activeInput.type === 'number' || activeInput.id.toLowerCase().includes('pin')) {
         currentLayout = numLayout;
@@ -122,7 +135,6 @@ export function initCustomKeyboard() {
       buildKeyboard(currentLayout);
       kb.style.display = 'flex';
 
-      // Move cursor to end
       const length = activeInput.value.length;
       activeInput.setSelectionRange(length, length);
       activeInput.focus();
@@ -223,22 +235,20 @@ export function initCustomKeyboard() {
     resizeHandle.releasePointerCapture(e.pointerId);
   });
 
-// ------------------- Click outside closes keyboard -------------------
-document.addEventListener('pointerdown', e => {
-  const inputs = document.querySelectorAll('input');
-  const isClickInsideKeyboard = kb.contains(e.target);
-  const isClickInsideInput = [...inputs].some(i => i.contains(e.target));
+  // ------------------- Click outside closes keyboard -------------------
+  document.addEventListener('pointerdown', e => {
+    const inputs = document.querySelectorAll('input');
+    const isClickInsideKeyboard = kb.contains(e.target);
+    const isClickInsideInput = [...inputs].some(i => i.contains(e.target));
+    const isEyeIcon = e.target.classList.contains('auth-eye-icon');
 
-  // Ignore clicks on the eye icon
-  const isEyeIcon = e.target.classList.contains('auth-eye-icon');
-
-  if (!isClickInsideKeyboard && !isClickInsideInput && !isEyeIcon) {
-    kb.style.display = 'none';
-    isShift = false;
-    shiftLock = false;
-    kb.style.transform = 'scale(1)';
-    if (activeInput) activeInput.removeAttribute('inputmode');
-    activeInput = null;
-  }
-});
+    if (!isClickInsideKeyboard && !isClickInsideInput && !isEyeIcon) {
+      kb.style.display = 'none';
+      isShift = false;
+      shiftLock = false;
+      kb.style.transform = 'scale(1)';
+      if (activeInput) activeInput.removeAttribute('inputmode');
+      activeInput = null;
+    }
+  });
 }
