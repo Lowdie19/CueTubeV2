@@ -683,16 +683,32 @@
       padding: 0px 0px 10px 0px!important;
     }
   
-    .input-row-lifted {
+    .input-lifted {
       position: fixed !important;
       z-index: 9999 !important;
-      bottom: 180px; /* adjust so keyboard won’t cover */
+      top: 10px; /* small space above keyboard */
       left: 50%;
       transform: translateX(-50%);
-      width: 90%;      /* optional: keep row width */
+      width: 90%;
+      max-width: 400px;
       transition: all 0.25s ease;
+      background: rgba(0,0,0,0.85);
+      padding: 12px;
+      border-radius: 16px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-  
+    .input-lifted input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 16px;
+    }
+
 </style>
 
 
@@ -954,6 +970,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+  
+  
+  // Find all inputs on page
+document.querySelectorAll('input').forEach(input => {
+  input.addEventListener('focus', () => {
+    // Find the nearest parent wrapper (or the input itself)
+    let wrapper = input.closest('.input-lift-wrapper') || input.parentElement;
+
+    // Add lifted class
+    wrapper.classList.add('input-lifted');
+
+    // Scroll into view for mobile keyboard
+    setTimeout(() => {
+      wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  });
+
+  input.addEventListener('blur', () => {
+    let wrapper = input.closest('.input-lift-wrapper') || input.parentElement;
+
+    setTimeout(() => {
+      // Remove class if no input inside is focused
+      if (![...wrapper.querySelectorAll('input')].some(i => i === document.activeElement)) {
+        wrapper.classList.remove('input-lifted');
+      }
+    }, 0);
+  });
+});
+  
 </script>
 
 
@@ -979,32 +1024,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Run on load and resize
     checkOrientation();
     window.addEventListener("resize", checkOrientation);
-  
-  
-    document.querySelectorAll('.input-row').forEach(row => {
-      const inputs = row.querySelectorAll('input');
-
-      inputs.forEach(input => {
-        input.addEventListener('focus', () => {
-          row.classList.add('input-row-lifted');
-
-          // Optional: scroll the row into view (mobile-friendly)
-          setTimeout(() => {
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 100);
-        });
-
-        input.addEventListener('blur', () => {
-          // Only remove class if no input inside is focused
-          setTimeout(() => {
-            if (![...inputs].some(i => i === document.activeElement)) {
-              row.classList.remove('input-row-lifted');
-            }
-          }, 0);
-        });
-      });
-    });
-  
 </script>
 
 
