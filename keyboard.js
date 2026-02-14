@@ -141,43 +141,47 @@ export function initCustomKeyboard() {
     });
   });
 
-  // ------------------- Handle key clicks -------------------
-  kb.addEventListener('click', e => {
-    e.stopPropagation();
-    if (!e.target.dataset.key || !activeInput) return;
 
-    const key = e.target.dataset.key;
+// ------------------- Handle key clicks -------------------
+kb.addEventListener('click', e => {
+  e.stopPropagation();
+  if (!e.target.dataset.key || !activeInput) return;
 
-    if (key === 'BACK') {
-      activeInput.value = activeInput.value.slice(0, -1);
-    } else if (key === 'SPACE') {
-      activeInput.value += ' ';
-    } else if (key === 'SHIFT') {
-      const now = Date.now();
-      if (now - lastShiftTime < 400) {
-        shiftLock = !shiftLock;
-        isShift = shiftLock;
-      } else {
-        isShift = !isShift;
-        if (shiftLock) isShift = true;
-      }
-      lastShiftTime = now;
+  const key = e.target.dataset.key;
 
-      if (activeInput.type !== 'number' && !activeInput.id.toLowerCase().includes('pin')) {
-        currentLayout = (isShift || shiftLock) ? alphaLayoutUpper : alphaLayoutLower;
-        buildKeyboard(currentLayout);
-      }
+  if (key === 'BACK') {
+    activeInput.value = activeInput.value.slice(0, -1);
+  } else if (key === 'SPACE') {
+    activeInput.value += ' ';
+  } else if (key === 'SHIFT') {
+    const now = Date.now();
+    if (now - lastShiftTime < 400) {
+      shiftLock = !shiftLock;
+      isShift = shiftLock;
     } else {
-      activeInput.value += key;
-      if (!shiftLock && activeInput.type !== 'number' && !activeInput.id.toLowerCase().includes('pin')) {
-        isShift = false;
-        currentLayout = alphaLayoutLower;
-        buildKeyboard(currentLayout);
-      }
+      isShift = !isShift;
+      if (shiftLock) isShift = true;
     }
+    lastShiftTime = now;
 
-    activeInput.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+    // rebuild only for non-numeric / non-pin / non-songInput
+    if (activeInput.type !== 'number' && !activeInput.id.toLowerCase().includes('pin') && activeInput.id !== 'songInput') {
+      currentLayout = (isShift || shiftLock) ? alphaLayoutUpper : alphaLayoutLower;
+      buildKeyboard(currentLayout);
+    }
+  } else {
+    activeInput.value += key;
+
+    // only reset shift for non-numeric / non-pin / non-songInput
+    if (!shiftLock && activeInput.type !== 'number' && !activeInput.id.toLowerCase().includes('pin') && activeInput.id !== 'songInput') {
+      isShift = false;
+      currentLayout = alphaLayoutLower;
+      buildKeyboard(currentLayout);
+    }
+  }
+
+  activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+});
 
   // ------------------- Drag keyboard -------------------
   let isDragging = false;
@@ -235,20 +239,48 @@ export function initCustomKeyboard() {
     resizeHandle.releasePointerCapture(e.pointerId);
   });
 
-  // ------------------- Click outside closes keyboard -------------------
-  document.addEventListener('pointerdown', e => {
-    const inputs = document.querySelectorAll('input');
-    const isClickInsideKeyboard = kb.contains(e.target);
-    const isClickInsideInput = [...inputs].some(i => i.contains(e.target));
-    const isEyeIcon = e.target.classList.contains('auth-eye-icon');
+// 1️⃣ Show keyboard when tapping an input
+document.querySelectorAll('input').forEach(input => {
+  input.addEventListener('pointerdown', e => {
+    // only show keyboard, don’t stop event propagation
+    activeInput = e.target;
 
-    if (!isClickInsideKeyboard && !isClickInsideInput && !isEyeIcon) {
-      kb.style.display = 'none';
-      isShift = false;
-      shiftLock = false;
-      kb.style.transform = 'scale(1)';
-      if (activeInput) activeInput.removeAttribute('inputmode');
-      activeInput = null;
+    activeInput.setAttribute('inputmode', 'none');
+    activeInput.removeAttribute('readonly');
+
+    // NUMERIC CONDITION
+    if (
+      activeInput.type === 'number' ||
+      activeInput.id.toLowerCase().includes('pin') ||
+      activeInput.id === 'songInput'
+    ) {
+      currentLayout = numLayout;
+    } else {
+      currentLayout = isShift ? alphaLayoutUpper : alphaLayoutLower;
     }
+
+    buildKeyboard(currentLayout);
+    kb.style.display = 'flex';
+
+    const length = activeInput.value.length;
+    activeInput.setSelectionRange(length, length);
+    activeInput.focus();
   });
+});
+
+// 2️⃣ Hide keyboard when clicking outside
+document.addEventListener('pointerdown', e => {
+  const inputs = document.querySelectorAll('input');
+  const isClickInsideKeyboard = kb.contains(e.target);
+  const isClickInsideInput = [...inputs].some(i => i.contains(e.target));
+
+  if (!isClickInsideKeyboard && !isClickInsideInput) {
+    kb.style.display = 'none';
+    isShift = false;
+    shiftLock = false;
+    kb.style.transform = 'scale(1)';
+    if (activeInput) activeInput.removeAttribute('inputmode');
+    activeInput = null;
+  }
+});
 }
