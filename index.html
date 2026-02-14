@@ -683,6 +683,16 @@
       padding: 0px 0px 10px 0px!important;
     }
   
+    .input-row-lifted {
+      position: fixed !important;
+      z-index: 9999 !important;
+      bottom: 180px; /* adjust so keyboard won’t cover */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;      /* optional: keep row width */
+      transition: all 0.25s ease;
+    }
+  
 </style>
 
 
@@ -969,6 +979,32 @@ document.addEventListener("DOMContentLoaded", () => {
     // Run on load and resize
     checkOrientation();
     window.addEventListener("resize", checkOrientation);
+  
+  
+    document.querySelectorAll('.input-row').forEach(row => {
+      const inputs = row.querySelectorAll('input');
+
+      inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+          row.classList.add('input-row-lifted');
+
+          // Optional: scroll the row into view (mobile-friendly)
+          setTimeout(() => {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        });
+
+        input.addEventListener('blur', () => {
+          // Only remove class if no input inside is focused
+          setTimeout(() => {
+            if (![...inputs].some(i => i === document.activeElement)) {
+              row.classList.remove('input-row-lifted');
+            }
+          }, 0);
+        });
+      });
+    });
+  
 </script>
 
 
