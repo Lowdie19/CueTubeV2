@@ -1,4 +1,3 @@
-// keyboard.js
 export function initCustomKeyboard() {
   // ------------------- Create keyboard -------------------
   const kb = document.createElement('div');
@@ -56,7 +55,7 @@ export function initCustomKeyboard() {
 
   let currentLayout = alphaLayoutUpper;
   let isShift = false;
-  let shiftLock = false; // for double-tap shift
+  let shiftLock = false;
   let lastShiftTime = 0;
   let activeInput = null;
 
@@ -92,9 +91,7 @@ export function initCustomKeyboard() {
         btn.style.userSelect = 'none';
         btn.style.boxSizing = 'border-box';
 
-        if (key === 'SHIFT') {
-          btn.style.background = isShift ? '#777' : '#333';
-        }
+        if (key === 'SHIFT') btn.style.background = isShift ? '#777' : '#333';
 
         row.appendChild(btn);
       });
@@ -106,12 +103,17 @@ export function initCustomKeyboard() {
   buildKeyboard(currentLayout);
 
   // ------------------- Show keyboard -------------------
-  document.querySelectorAll('#authContainer input').forEach(input => {
+  // Attach to all inputs, disable native keyboard
+  document.querySelectorAll('input').forEach(input => {
     input.addEventListener('pointerdown', e => {
-      e.preventDefault(); // prevent native keyboard on mobile
+      e.preventDefault(); // disable native keyboard
       activeInput = e.target;
 
-      if (activeInput.id.includes('Pin')) {
+      // Disable native mobile keyboard
+      activeInput.setAttribute('inputmode', 'none');
+      activeInput.removeAttribute('readonly'); // keep cursor visible
+
+      if (activeInput.type === 'number' || activeInput.id.toLowerCase().includes('pin')) {
         currentLayout = numLayout;
       } else {
         currentLayout = isShift ? alphaLayoutUpper : alphaLayoutLower;
@@ -119,13 +121,17 @@ export function initCustomKeyboard() {
 
       buildKeyboard(currentLayout);
       kb.style.display = 'flex';
-      activeInput.setAttribute('readonly', true);
+
+      // Move cursor to end
+      const length = activeInput.value.length;
+      activeInput.setSelectionRange(length, length);
+      activeInput.focus();
     });
   });
 
   // ------------------- Handle key clicks -------------------
   kb.addEventListener('click', e => {
-    e.stopPropagation(); // prevent closing keyboard
+    e.stopPropagation();
     if (!e.target.dataset.key || !activeInput) return;
 
     const key = e.target.dataset.key;
@@ -136,7 +142,7 @@ export function initCustomKeyboard() {
       activeInput.value += ' ';
     } else if (key === 'SHIFT') {
       const now = Date.now();
-      if (now - lastShiftTime < 400) { // double-tap
+      if (now - lastShiftTime < 400) {
         shiftLock = !shiftLock;
         isShift = shiftLock;
       } else {
@@ -145,13 +151,13 @@ export function initCustomKeyboard() {
       }
       lastShiftTime = now;
 
-      if (!activeInput.id.includes('Pin')) {
+      if (activeInput.type !== 'number' && !activeInput.id.toLowerCase().includes('pin')) {
         currentLayout = (isShift || shiftLock) ? alphaLayoutUpper : alphaLayoutLower;
         buildKeyboard(currentLayout);
       }
     } else {
       activeInput.value += key;
-      if (!shiftLock && !activeInput.id.includes('Pin')) {
+      if (!shiftLock && activeInput.type !== 'number' && !activeInput.id.toLowerCase().includes('pin')) {
         isShift = false;
         currentLayout = alphaLayoutLower;
         buildKeyboard(currentLayout);
@@ -161,13 +167,13 @@ export function initCustomKeyboard() {
     activeInput.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
-  // ------------------- Drag entire keyboard -------------------
+  // ------------------- Drag keyboard -------------------
   let isDragging = false;
   let dragOffsetX = 0;
   let dragOffsetY = 0;
 
   kb.addEventListener('pointerdown', e => {
-    if (e.target.tagName === 'BUTTON' || e.target === resizeHandle) return; // ignore buttons and resize
+    if (e.target.tagName === 'BUTTON' || e.target === resizeHandle) return;
     isDragging = true;
     dragOffsetX = e.clientX - kb.getBoundingClientRect().left;
     dragOffsetY = e.clientY - kb.getBoundingClientRect().top;
@@ -187,7 +193,7 @@ export function initCustomKeyboard() {
     kb.releasePointerCapture(e.pointerId);
   });
 
-  // ------------------- Scale keyboard -------------------
+  // ------------------- Resize keyboard -------------------
   let isResizing = false;
   let startX = 0;
   let startY = 0;
@@ -217,19 +223,22 @@ export function initCustomKeyboard() {
     resizeHandle.releasePointerCapture(e.pointerId);
   });
 
-  // ------------------- Click outside closes keyboard -------------------
-  document.addEventListener('pointerdown', e => {
-    const inputs = document.querySelectorAll('#authContainer input');
-    const isClickInsideKeyboard = kb.contains(e.target);
-    const isClickInsideInput = [...inputs].some(i => i.contains(e.target));
+// ------------------- Click outside closes keyboard -------------------
+document.addEventListener('pointerdown', e => {
+  const inputs = document.querySelectorAll('input');
+  const isClickInsideKeyboard = kb.contains(e.target);
+  const isClickInsideInput = [...inputs].some(i => i.contains(e.target));
 
-    if (!isClickInsideKeyboard && !isClickInsideInput) {
-      kb.style.display = 'none';
-      isShift = false;
-      shiftLock = false;
-      kb.style.transform = 'scale(1)';
-      if (activeInput) activeInput.removeAttribute('readonly');
-      activeInput = null;
-    }
-  });
+  // Ignore clicks on the eye icon
+  const isEyeIcon = e.target.classList.contains('auth-eye-icon');
+
+  if (!isClickInsideKeyboard && !isClickInsideInput && !isEyeIcon) {
+    kb.style.display = 'none';
+    isShift = false;
+    shiftLock = false;
+    kb.style.transform = 'scale(1)';
+    if (activeInput) activeInput.removeAttribute('inputmode');
+    activeInput = null;
+  }
+});
 }
