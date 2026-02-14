@@ -26,6 +26,7 @@ const loginEye = loginBox.querySelector('.auth-eye-icon[data-target="loginPin"]'
 const registerEye = registerBox.querySelector('.auth-eye-icon[data-target="registerPin"]');
 const loadingBlock = document.getElementById('loadingBlock');
 const logoutLink = logoutBtn.querySelector("a");
+const songInput = document.getElementById("songInput");
 
 // State
 let _currentUser = null;
@@ -238,22 +239,31 @@ logoutLink.addEventListener('click', e => {
 
 // -----------------------
 // Auth state listener (on page load)
-listenForAuthChanges(async user=>{
-  if(user){
-    _currentUser={username:user.username,userData:user};
-    profileVolumeSection.style.display='flex';
-    authContainer.style.display='none';
-    myProfileDiv.innerHTML=''; myVolumeDiv.innerHTML='';
-    await loadProfile(user.username,myProfileDiv);
+listenForAuthChanges(async user => {
+  if (user) {
+    _currentUser = { username: user.username, userData: user };
+    profileVolumeSection.style.display = 'flex';
+    authContainer.style.display = 'none';
+    myProfileDiv.innerHTML = '';
+    myVolumeDiv.innerHTML = '';
+    await loadProfile(user.username, myProfileDiv);
     createVolumeIcon(myVolumeDiv);
-    logoutBtn.style.display='block';
+    logoutBtn.style.display = 'block';
+
+    // ✅ update placeholder for all devices
+    songInput.placeholder = "Paste song URL or Input song number here";
+    
   } else {
-    _currentUser=null;
-    authContainer.style.display='flex';
-    profileVolumeSection.style.display='none';
+    _currentUser = null;
+    authContainer.style.display = 'flex';
+    profileVolumeSection.style.display = 'none';
     showLogin();
     clearAuthInputs();
-    resetPinEye(loginPin,loginEye); resetPinEye(registerPin,registerEye);
+    resetPinEye(loginPin, loginEye);
+    resetPinEye(registerPin, registerEye);
+
+    // ✅ revert placeholder for all devices
+    songInput.placeholder = "Paste song URL / link here";
   }
 });
 
