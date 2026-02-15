@@ -31,21 +31,8 @@ export function initCustomKeyboard() {
     flexDirection: 'column',
     userSelect: 'none',
     transformOrigin: 'bottom right',
-    touchAction: 'none'
+    touchAction: 'none',
   });
-
-  // ------------------- Resize Handle -------------------
-  const resizeHandle = document.createElement('div');
-  Object.assign(resizeHandle.style, {
-    height: '15px',
-    width: '15px',
-    cursor: 'nwse-resize',
-    background: '#555',
-    borderRadius: '3px',
-    alignSelf: 'flex-end',
-    marginTop: 'auto'
-  });
-  kb.appendChild(resizeHandle);
 
   document.body.appendChild(kb);
 
@@ -79,9 +66,7 @@ export function initCustomKeyboard() {
 
   // ------------------- Build Keyboard -------------------
   function buildKeyboard(layout) {
-    kb.querySelectorAll('div').forEach(div => {
-      if (div !== resizeHandle) div.remove();
-    });
+    kb.querySelectorAll('div').forEach(div => div.remove());
 
     layout.forEach(rowKeys => {
       const row = document.createElement('div');
@@ -118,7 +103,7 @@ export function initCustomKeyboard() {
         row.appendChild(btn);
       });
 
-      kb.insertBefore(row, resizeHandle);
+      kb.appendChild(row);
     });
   }
 
@@ -134,16 +119,14 @@ export function initCustomKeyboard() {
     const id = activeInput.id.toLowerCase();
     const isNumeric = activeInput.type === 'number' || id.includes('pin') || id === 'songinput';
 
-    // Set layout
     currentLayout = isNumeric ? numLayout : (isShift ? alphaLayoutUpper : alphaLayoutLower);
 
-    // Adjust keyboard container size based on layout
     if (isNumeric) {
-      kb.style.width = '300px';   // narrower numeric keyboard
-      kb.style.height = '310px';  // shorter numeric keyboard
+      kb.style.width = '300px';
+      kb.style.height = '310px';
     } else {
-      kb.style.width = '460px';   // default alphabet width
-      kb.style.height = '270px';  // default alphabet height
+      kb.style.width = '460px';
+      kb.style.height = '270px';
     }
 
     buildKeyboard(currentLayout);
@@ -167,19 +150,11 @@ export function initCustomKeyboard() {
 
     const key = e.target.dataset.key;
 
-    if (key === 'BACK') {
-      activeInput.value = activeInput.value.slice(0, -1);
-
-    } else if (key === 'CLEAR') {
-      activeInput.value = '';
-
-    } else if (key === 'SPACE') {
-      activeInput.value += ' ';
-
-    } else if (key === 'SHIFT') {
+    if (key === 'BACK') activeInput.value = activeInput.value.slice(0, -1);
+    else if (key === 'CLEAR') activeInput.value = '';
+    else if (key === 'SPACE') activeInput.value += ' ';
+    else if (key === 'SHIFT') {
       const now = Date.now();
-
-      // Double tap shift -> LOCK
       if (now - lastShiftTime < 400) {
         shiftLock = !shiftLock;
         isShift = shiftLock;
@@ -188,7 +163,6 @@ export function initCustomKeyboard() {
         if (shiftLock) isShift = true;
       }
       lastShiftTime = now;
-
       if (activeInput.type !== 'number' &&
           !activeInput.id.toLowerCase().includes('pin') &&
           activeInput.id !== 'songInput') {
@@ -196,85 +170,79 @@ export function initCustomKeyboard() {
         buildKeyboard(currentLayout);
       }
       return;
+    } else if (key === 'PASTE') {
+      try { const text = await navigator.clipboard.readText(); if (text) activeInput.value += text; }
+      catch (err) { console.warn("Clipboard read blocked:", err); }
+      return;
+    } else activeInput.value += key;
 
-      } else if (key === 'PASTE') {
-        try {
-          const text = await navigator.clipboard.readText();
-          if (text) activeInput.value += text;
-        } catch (err) {
-          console.warn("Clipboard read blocked:", err);
-        }
-        return;
-
-    } else {
-      activeInput.value += key;
-
-      if (!shiftLock &&
-          activeInput.type !== 'number' &&
-          !activeInput.id.toLowerCase().includes('pin') &&
-          activeInput.id !== 'songInput') {
-        isShift = false;
-        currentLayout = alphaLayoutLower;
-        buildKeyboard(currentLayout);
-      }
+    if (!shiftLock &&
+        activeInput.type !== 'number' &&
+        !activeInput.id.toLowerCase().includes('pin') &&
+        activeInput.id !== 'songInput') {
+      isShift = false;
+      currentLayout = alphaLayoutLower;
+      buildKeyboard(currentLayout);
     }
 
     activeInput.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
-  // ------------------- Drag Keyboard -------------------
-  let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
+  // ------------------- Drag + Pinch-to-Zoom Keyboard -------------------
+  let isDragging = false;
+  let dragOffsetX = 0, dragOffsetY = 0;
+
+  let pointers = {};
+  let initialDistance = 0;
+  let initialScale = 1;
 
   kb.addEventListener('pointerdown', e => {
-    if (e.target.tagName === 'BUTTON' || e.target === resizeHandle) return;
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
 
-    isDragging = true;
-    dragOffsetX = e.clientX - kb.getBoundingClientRect().left;
-    dragOffsetY = e.clientY - kb.getBoundingClientRect().top;
+    if (Object.keys(pointers).length === 1) {
+      // Single pointer -> drag
+      isDragging = true;
+      const rect = kb.getBoundingClientRect();
+      dragOffsetX = e.clientX - rect.left;
+      dragOffsetY = e.clientY - rect.top;
+    } else if (Object.keys(pointers).length === 2) {
+      // Two pointers -> pinch
+      isDragging = false;
+      const keys = Object.keys(pointers);
+      const p1 = pointers[keys[0]];
+      const p2 = pointers[keys[1]];
+      initialDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const transform = kb.style.transform.match(/scale\(([\d.]+)\)/);
+      initialScale = transform ? parseFloat(transform[1]) : 1;
+    }
+
     kb.setPointerCapture(e.pointerId);
   });
 
   kb.addEventListener('pointermove', e => {
-    if (!isDragging) return;
+    if (!pointers[e.pointerId]) return;
 
-    kb.style.left = `${e.clientX - dragOffsetX}px`;
-    kb.style.top = `${e.clientY - dragOffsetY}px`;
-    kb.style.right = 'auto';
-    kb.style.bottom = 'auto';
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+
+    if (Object.keys(pointers).length === 1 && isDragging) {
+      // Drag
+      kb.style.left = `${e.clientX - dragOffsetX}px`;
+      kb.style.top = `${e.clientY - dragOffsetY}px`;
+      kb.style.right = 'auto';
+      kb.style.bottom = 'auto';
+    } else if (Object.keys(pointers).length === 2) {
+      // Pinch zoom
+      const keys = Object.keys(pointers);
+      const p1 = pointers[keys[0]];
+      const p2 = pointers[keys[1]];
+      const currentDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const scale = initialScale * (currentDistance / initialDistance);
+      kb.style.transform = `scale(${Math.max(0.5, Math.min(scale, 3))})`;
+    }
   });
 
-  kb.addEventListener('pointerup', e => {
-    isDragging = false;
-    kb.releasePointerCapture(e.pointerId);
-  });
-
-  // ------------------- Resize Keyboard -------------------
-  let isResizing = false, startX = 0, startY = 0, startWidth = 0, startHeight = 0;
-
-  resizeHandle.addEventListener('pointerdown', e => {
-    isResizing = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    const rect = kb.getBoundingClientRect();
-    startWidth = rect.width;
-    startHeight = rect.height;
-    resizeHandle.setPointerCapture(e.pointerId);
-  });
-
-  resizeHandle.addEventListener('pointermove', e => {
-    if (!isResizing) return;
-
-    const scaleX = (startWidth + (e.clientX - startX)) / startWidth;
-    const scaleY = (startHeight + (startY - e.clientY)) / startHeight;
-    const scale = Math.max(scaleX, scaleY);
-
-    kb.style.transform = `scale(${scale})`;
-  });
-
-  resizeHandle.addEventListener('pointerup', e => {
-    isResizing = false;
-    resizeHandle.releasePointerCapture(e.pointerId);
-  });
+  kb.addEventListener('pointerup', e => { delete pointers[e.pointerId]; isDragging = false; });
+  kb.addEventListener('pointercancel', e => { delete pointers[e.pointerId]; isDragging = false; });
 
   // ------------------- Hide Keyboard Outside -------------------
   document.addEventListener('pointerdown', e => {
@@ -291,4 +259,5 @@ export function initCustomKeyboard() {
       activeInput = null;
     }
   });
+
 }
