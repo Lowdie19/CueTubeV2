@@ -754,10 +754,22 @@
     <!-- Left Drawer -->
   <div id="leftDrawer">
     
-    <i id="btnShowHide" class="fa-solid fa-chevron-up" 
-       title="Toggle Login/Profile"
-       style="padding: 14px; text-align: right; cursor: pointer; color: gray; font-size: 20px; display: none;">
-    </i>
+    <p style="margin: 0; padding: 0px; color: white;">
+      <i id="btnShowHide" class="fa-solid fa-chevron-up"
+         title="Toggle Login/Profile"
+         style="
+           width: 30px;
+           height: 30px;
+           padding: 10px;
+           cursor: pointer;
+           color: gray;
+           font-size: 20px;
+           display: inline-block;
+           text-align: center;
+           float: right;
+         ">
+      </i>
+    </p>
     
       <!-- Profile & Auth Section -->
     <div id="profileVolumeSection" style="display:flex; flex-direction:column;">
@@ -970,7 +982,7 @@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
   const mobileRegLogBtn = document.getElementById("btnShowHide");
-  const loginBox = document.querySelector("#loginBox.auth-box");
+  const loginBox = document.querySelector("#authContainer");
   const profileVolume = document.getElementById("profileVolumeSection");
 
   mobileRegLogBtn.addEventListener("click", () => {
