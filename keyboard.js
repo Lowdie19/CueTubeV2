@@ -1,20 +1,13 @@
 export function initCustomKeyboard() {
 
-  // ----------------------------------
-  // MOBILE CHECK (phones/tablets only)
-  // ----------------------------------
   const isMobile =
     /android|iphone|ipad|ipod|opera mini|iemobile|wpdesktop/i.test(navigator.userAgent) ||
     window.matchMedia("(max-width: 1024px)").matches;
 
-  if (!isMobile) {
-    console.log("Custom keyboard disabled — desktop mode");
-    return;
-  }
+  if (!isMobile) return console.log("Custom keyboard disabled — desktop mode");
 
   console.log("Custom keyboard enabled — mobile detected");
 
-  // ------------------- Create keyboard container -------------------
   const kb = document.createElement('div');
   kb.id = 'customKeyboard';
   Object.assign(kb.style, {
@@ -30,26 +23,23 @@ export function initCustomKeyboard() {
     boxSizing: 'border-box',
     flexDirection: 'column',
     userSelect: 'none',
-    transformOrigin: 'bottom right',
+    transformOrigin: 'center center', // <-- center of keyboard
     touchAction: 'none',
   });
 
   document.body.appendChild(kb);
 
-  // ------------------- Keyboard Layouts -------------------
   const alphaLayoutUpper = [
     ['Q','W','E','R','T','Y','U','I','O','P'],
     ['A','S','D','F','G','H','J','K','L'],
     ['Z','X','C','V','B','N','M','BACK'],
     ['SHIFT','SPACE','CLEAR']
   ];
-
   const alphaLayoutLower = alphaLayoutUpper.map(row =>
     row.map(key =>
       (key === 'SHIFT' || key === 'BACK' || key === 'SPACE' || key === 'CLEAR') ? key : key.toLowerCase()
     )
   );
-
   const numLayout = [
     ['1','2','3'],
     ['4','5','6'],
@@ -64,10 +54,8 @@ export function initCustomKeyboard() {
   let lastShiftTime = 0;
   let activeInput = null;
 
-  // ------------------- Build Keyboard -------------------
   function buildKeyboard(layout) {
     kb.querySelectorAll('div').forEach(div => div.remove());
-
     layout.forEach(rowKeys => {
       const row = document.createElement('div');
       Object.assign(row.style, {
@@ -82,9 +70,7 @@ export function initCustomKeyboard() {
       rowKeys.forEach(key => {
         const btn = document.createElement('button');
         btn.dataset.key = key;
-        btn.textContent = key === 'BACK' ? '⌫' :
-                          key === 'SPACE' ? '␣' : key;
-
+        btn.textContent = key === 'BACK' ? '⌫' : key === 'SPACE' ? '␣' : key;
         Object.assign(btn.style, {
           flex: (key === 'SPACE') ? '5' : '1',
           margin: '2px',
@@ -99,7 +85,6 @@ export function initCustomKeyboard() {
           userSelect: 'none',
           boxSizing: 'border-box'
         });
-
         row.appendChild(btn);
       });
 
@@ -109,25 +94,17 @@ export function initCustomKeyboard() {
 
   buildKeyboard(currentLayout);
 
-  // ------------------- OPEN keyboard on input focus -------------------
   function openKeyboardForInput(input) {
     activeInput = input;
-
     activeInput.setAttribute('inputmode', 'none');
     activeInput.removeAttribute('readonly');
 
     const id = activeInput.id.toLowerCase();
     const isNumeric = activeInput.type === 'number' || id.includes('pin') || id === 'songinput';
-
     currentLayout = isNumeric ? numLayout : (isShift ? alphaLayoutUpper : alphaLayoutLower);
 
-    if (isNumeric) {
-      kb.style.width = '300px';
-      kb.style.height = '310px';
-    } else {
-      kb.style.width = '460px';
-      kb.style.height = '270px';
-    }
+    kb.style.width = isNumeric ? '300px' : '460px';
+    kb.style.height = isNumeric ? '310px' : '270px';
 
     buildKeyboard(currentLayout);
     kb.style.display = 'flex';
@@ -144,28 +121,18 @@ export function initCustomKeyboard() {
     });
   });
 
-  // ------------------- Key Press Handler -------------------
   kb.addEventListener('click', async e => {
     if (!e.target.dataset.key || !activeInput) return;
-
     const key = e.target.dataset.key;
-
     if (key === 'BACK') activeInput.value = activeInput.value.slice(0, -1);
     else if (key === 'CLEAR') activeInput.value = '';
     else if (key === 'SPACE') activeInput.value += ' ';
     else if (key === 'SHIFT') {
       const now = Date.now();
-      if (now - lastShiftTime < 400) {
-        shiftLock = !shiftLock;
-        isShift = shiftLock;
-      } else {
-        isShift = !isShift;
-        if (shiftLock) isShift = true;
-      }
+      if (now - lastShiftTime < 400) { shiftLock = !shiftLock; isShift = shiftLock; }
+      else { isShift = !isShift; if (shiftLock) isShift = true; }
       lastShiftTime = now;
-      if (activeInput.type !== 'number' &&
-          !activeInput.id.toLowerCase().includes('pin') &&
-          activeInput.id !== 'songInput') {
+      if (activeInput.type !== 'number' && !activeInput.id.toLowerCase().includes('pin') && activeInput.id !== 'songInput') {
         currentLayout = isShift ? alphaLayoutUpper : alphaLayoutLower;
         buildKeyboard(currentLayout);
       }
@@ -176,10 +143,7 @@ export function initCustomKeyboard() {
       return;
     } else activeInput.value += key;
 
-    if (!shiftLock &&
-        activeInput.type !== 'number' &&
-        !activeInput.id.toLowerCase().includes('pin') &&
-        activeInput.id !== 'songInput') {
+    if (!shiftLock && activeInput.type !== 'number' && !activeInput.id.toLowerCase().includes('pin') && activeInput.id !== 'songInput') {
       isShift = false;
       currentLayout = alphaLayoutLower;
       buildKeyboard(currentLayout);
@@ -188,30 +152,32 @@ export function initCustomKeyboard() {
     activeInput.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
-  // ------------------- Drag + Pinch-to-Zoom Keyboard -------------------
+  // ------------------- Drag + Center Pinch-to-Zoom -------------------
   let isDragging = false;
   let dragOffsetX = 0, dragOffsetY = 0;
-
   let pointers = {};
   let initialDistance = 0;
   let initialScale = 1;
+  let center = { x: 0, y: 0 };
 
   kb.addEventListener('pointerdown', e => {
     pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
 
     if (Object.keys(pointers).length === 1) {
-      // Single pointer -> drag
+      // Drag
       isDragging = true;
       const rect = kb.getBoundingClientRect();
       dragOffsetX = e.clientX - rect.left;
       dragOffsetY = e.clientY - rect.top;
     } else if (Object.keys(pointers).length === 2) {
-      // Two pointers -> pinch
+      // Pinch
       isDragging = false;
       const keys = Object.keys(pointers);
       const p1 = pointers[keys[0]];
       const p2 = pointers[keys[1]];
       initialDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const rect = kb.getBoundingClientRect();
+      center = { x: rect.width / 2, y: rect.height / 2 };
       const transform = kb.style.transform.match(/scale\(([\d.]+)\)/);
       initialScale = transform ? parseFloat(transform[1]) : 1;
     }
@@ -221,22 +187,20 @@ export function initCustomKeyboard() {
 
   kb.addEventListener('pointermove', e => {
     if (!pointers[e.pointerId]) return;
-
     pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
 
     if (Object.keys(pointers).length === 1 && isDragging) {
-      // Drag
       kb.style.left = `${e.clientX - dragOffsetX}px`;
       kb.style.top = `${e.clientY - dragOffsetY}px`;
       kb.style.right = 'auto';
       kb.style.bottom = 'auto';
     } else if (Object.keys(pointers).length === 2) {
-      // Pinch zoom
       const keys = Object.keys(pointers);
       const p1 = pointers[keys[0]];
       const p2 = pointers[keys[1]];
       const currentDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
       const scale = initialScale * (currentDistance / initialDistance);
+      kb.style.transformOrigin = 'center center'; // ensure scaling from center
       kb.style.transform = `scale(${Math.max(0.5, Math.min(scale, 3))})`;
     }
   });
@@ -244,12 +208,10 @@ export function initCustomKeyboard() {
   kb.addEventListener('pointerup', e => { delete pointers[e.pointerId]; isDragging = false; });
   kb.addEventListener('pointercancel', e => { delete pointers[e.pointerId]; isDragging = false; });
 
-  // ------------------- Hide Keyboard Outside -------------------
   document.addEventListener('pointerdown', e => {
     const inputs = [...document.querySelectorAll('input')];
     const isClickInsideKeyboard = kb.contains(e.target);
     const isClickInsideInput = inputs.some(i => i.contains(e.target));
-
     if (!isClickInsideKeyboard && !isClickInsideInput) {
       kb.style.display = 'none';
       isShift = false;
@@ -259,5 +221,4 @@ export function initCustomKeyboard() {
       activeInput = null;
     }
   });
-
 }
