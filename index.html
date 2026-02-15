@@ -684,6 +684,7 @@
     }
   
     #customKeyboard {
+      display: none;
       position: fixed;
       bottom: 0;
       right: 0;
@@ -708,10 +709,20 @@
       background: #444;
       color: white;
       pointer-events: auto; /* keys remain clickable */
+      
+      transition: transform 0.12s cubic-bezier(0.32, 0.72, 0, 1), 
+                background 0.12s ease;
     }
 
+      /* Smooth animation on press */
+    #customKeyboard button {
+      transition: transform 0.08s ease, background 0.08s ease;
+    }
+
+    /* Shrink + darken on press */
     #customKeyboard button:active {
-      background: #666;
+      transform: scale(0.92);
+      background: #555 !important;
     }
 
 }
