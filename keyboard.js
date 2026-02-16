@@ -1,5 +1,4 @@
 export function initCustomKeyboard() {
-
   const isMobile =
     /android|iphone|ipad|ipod|opera mini|iemobile|wpdesktop/i.test(navigator.userAgent) ||
     window.matchMedia("(max-width: 1024px)").matches;
@@ -13,8 +12,6 @@ export function initCustomKeyboard() {
   Object.assign(kb.style, {
     display: 'none',
     position: 'fixed',
-    bottom: '140px',
-    right: '0',
     background: '#222',
     border: '2px solid #555',
     borderRadius: '10px',
@@ -23,29 +20,30 @@ export function initCustomKeyboard() {
     boxSizing: 'border-box',
     flexDirection: 'column',
     userSelect: 'none',
-    transformOrigin: 'center center', // <-- center of keyboard
     touchAction: 'none',
   });
-
   document.body.appendChild(kb);
 
+  // --------------------------
+  // NEW KEYBOARD LAYOUTS
+  // --------------------------
   const alphaLayoutUpper = [
     ['Q','W','E','R','T','Y','U','I','O','P'],
     ['A','S','D','F','G','H','J','K','L'],
-    ['Z','X','C','V','B','N','M','BACK'],
-    ['SHIFT','SPACE','CLEAR']
+    ['Z','X','C','V','B','N','M','BACK','CLEAR'],
+    ['SHIFT','SPACE','ENTER']
   ];
+
   const alphaLayoutLower = alphaLayoutUpper.map(row =>
-    row.map(key =>
-      (key === 'SHIFT' || key === 'BACK' || key === 'SPACE' || key === 'CLEAR') ? key : key.toLowerCase()
-    )
+    row.map(key => ['SHIFT','BACK','SPACE','CLEAR','ENTER'].includes(key) ? key : key.toLowerCase())
   );
+
   const numLayout = [
+    ['CLEAR','BACK'],
     ['1','2','3'],
     ['4','5','6'],
     ['7','8','9'],
-    ['CLEAR','0','BACK'],
-    ['PASTE']
+    ['PASTE','0','ENTER']
   ];
 
   let currentLayout = alphaLayoutUpper;
@@ -55,35 +53,25 @@ export function initCustomKeyboard() {
   let activeInput = null;
 
   function buildKeyboard(layout) {
-    kb.querySelectorAll('div').forEach(div => div.remove());
+    kb.innerHTML = '';
     layout.forEach(rowKeys => {
       const row = document.createElement('div');
-      Object.assign(row.style, {
-        display: 'flex',
-        justifyContent: 'center',
-        marginBottom: '5px',
-        flexWrap: 'nowrap',
-        width: '100%',
-        boxSizing: 'border-box'
-      });
+      Object.assign(row.style, { display: 'flex', justifyContent: 'center', marginBottom: '5px', width: '100%', gap: '4px' });
 
       rowKeys.forEach(key => {
         const btn = document.createElement('button');
         btn.dataset.key = key;
-        btn.textContent = key === 'BACK' ? '⌫' : key === 'SPACE' ? '␣' : key;
+        btn.textContent = key === 'BACK' ? '⌫' : key === 'SPACE' ? '␣' : key === 'ENTER' ? '▶' : key;
+
         Object.assign(btn.style, {
           flex: (key === 'SPACE') ? '5' : '1',
-          margin: '2px',
           height: '40px',
-          minWidth: '0',
           borderRadius: '5px',
           border: '1px solid #555',
-          background: key === 'SHIFT' && isShift ? '#777' : '#333',
+          background: (key === 'SHIFT' && isShift) ? '#777' : '#333',
           color: '#fff',
           fontSize: '16px',
-          cursor: 'pointer',
-          userSelect: 'none',
-          boxSizing: 'border-box'
+          userSelect: 'none'
         });
         row.appendChild(btn);
       });
@@ -92,25 +80,47 @@ export function initCustomKeyboard() {
     });
   }
 
-  buildKeyboard(currentLayout);
+  function updateKeyboardPosition() {
+    const leftDrawer = document.querySelector('#leftDrawer');
+    const bottomBar = document.querySelector('#bottomBar');
+    if (!leftDrawer || !bottomBar) return;
+
+    const drawerRect = leftDrawer.getBoundingClientRect();
+    const bottomRect = bottomBar.getBoundingClientRect();
+    const naturalHeight = kb.dataset.numeric === "1" ? 310 : 270;
+
+    const availableHeight = bottomRect.top - 10;
+    const finalHeight = Math.min(naturalHeight, availableHeight);
+
+    kb.style.left = `${drawerRect.right}px`;
+    kb.style.bottom = `${window.innerHeight - bottomRect.top}px`;
+    kb.style.height = `${finalHeight}px`;
+
+    const availableWidth = window.innerWidth - drawerRect.right - 10;
+    kb.style.width = `${availableWidth}px`;
+
+    const scale = finalHeight / naturalHeight;
+    kb.style.transform = `scale(${scale})`;
+    kb.style.transformOrigin = "bottom left";
+  }
+
+  window.addEventListener('resize', updateKeyboardPosition);
 
   function openKeyboardForInput(input) {
     activeInput = input;
-    activeInput.setAttribute('inputmode', 'none');
-    activeInput.removeAttribute('readonly');
+    kb.dataset.numeric = "0";
 
     const id = activeInput.id.toLowerCase();
     const isNumeric = activeInput.type === 'number' || id.includes('pin') || id === 'songinput';
     currentLayout = isNumeric ? numLayout : (isShift ? alphaLayoutUpper : alphaLayoutLower);
-
-    kb.style.width = isNumeric ? '300px' : '460px';
-    kb.style.height = isNumeric ? '310px' : '270px';
+    kb.dataset.numeric = isNumeric ? "1" : "0";
 
     buildKeyboard(currentLayout);
     kb.style.display = 'flex';
+    updateKeyboardPosition();
 
-    const length = activeInput.value.length;
-    activeInput.setSelectionRange(length, length);
+    const len = activeInput.value.length;
+    activeInput.setSelectionRange(len, len);
     activeInput.focus();
   }
 
@@ -121,103 +131,71 @@ export function initCustomKeyboard() {
     });
   });
 
-  kb.addEventListener('click', async e => {
+kb.addEventListener('click', async e => {
     if (!e.target.dataset.key || !activeInput) return;
+
     const key = e.target.dataset.key;
+
+    // 🔹 Animate key press for all keys except SHIFT and PASTE
+    if (!['SHIFT','PASTE'].includes(key)) {
+        e.target.classList.add('key-pressed');
+        setTimeout(() => e.target.classList.remove('key-pressed'), 80);
+    }
+
+    // --- key actions ---
     if (key === 'BACK') activeInput.value = activeInput.value.slice(0, -1);
     else if (key === 'CLEAR') activeInput.value = '';
     else if (key === 'SPACE') activeInput.value += ' ';
+    else if (key === 'ENTER') {
+        activeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        activeInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+    }
     else if (key === 'SHIFT') {
-      const now = Date.now();
-      if (now - lastShiftTime < 400) { shiftLock = !shiftLock; isShift = shiftLock; }
-      else { isShift = !isShift; if (shiftLock) isShift = true; }
-      lastShiftTime = now;
-      if (activeInput.type !== 'number' && !activeInput.id.toLowerCase().includes('pin') && activeInput.id !== 'songInput') {
-        currentLayout = isShift ? alphaLayoutUpper : alphaLayoutLower;
-        buildKeyboard(currentLayout);
-      }
-      return;
-    } else if (key === 'PASTE') {
-      try { const text = await navigator.clipboard.readText(); if (text) activeInput.value += text; }
-      catch (err) { console.warn("Clipboard read blocked:", err); }
-      return;
-    } else activeInput.value += key;
+        const now = Date.now();
+        if (now - lastShiftTime < 400) shiftLock = !shiftLock;
+        isShift = shiftLock ? true : !isShift;
+        lastShiftTime = now;
 
-    if (!shiftLock && activeInput.type !== 'number' && !activeInput.id.toLowerCase().includes('pin') && activeInput.id !== 'songInput') {
-      isShift = false;
-      currentLayout = alphaLayoutLower;
-      buildKeyboard(currentLayout);
+        // only rebuild if layout actually changes (Shift pressed)
+        if (kb.dataset.numeric !== "1") {
+            currentLayout = isShift ? alphaLayoutUpper : alphaLayoutLower;
+            buildKeyboard(currentLayout);
+            updateKeyboardPosition();
+        }
+        return; // exit early so no other actions
+    }
+    else if (key === 'PASTE') {
+        try { 
+            const txt = await navigator.clipboard.readText(); 
+            if (txt) activeInput.value += txt; 
+        } catch { 
+            console.warn('Clipboard blocked'); 
+        }
+        return;
+    }
+    else activeInput.value += key;
+
+    // ✅ DO NOT rebuild keyboard for normal letter keys
+    // only reset shift if not locked
+    if (!shiftLock && kb.dataset.numeric !== "1" && isShift) {
+        isShift = false;
+        currentLayout = alphaLayoutLower;
+        buildKeyboard(currentLayout); // only rebuild once after shift reset
+        updateKeyboardPosition();
     }
 
     activeInput.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-
-  // ------------------- Drag + Center Pinch-to-Zoom -------------------
-  let isDragging = false;
-  let dragOffsetX = 0, dragOffsetY = 0;
-  let pointers = {};
-  let initialDistance = 0;
-  let initialScale = 1;
-  let center = { x: 0, y: 0 };
-
-  kb.addEventListener('pointerdown', e => {
-    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
-
-    if (Object.keys(pointers).length === 1) {
-      // Drag
-      isDragging = true;
-      const rect = kb.getBoundingClientRect();
-      dragOffsetX = e.clientX - rect.left;
-      dragOffsetY = e.clientY - rect.top;
-    } else if (Object.keys(pointers).length === 2) {
-      // Pinch
-      isDragging = false;
-      const keys = Object.keys(pointers);
-      const p1 = pointers[keys[0]];
-      const p2 = pointers[keys[1]];
-      initialDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      const rect = kb.getBoundingClientRect();
-      center = { x: rect.width / 2, y: rect.height / 2 };
-      const transform = kb.style.transform.match(/scale\(([\d.]+)\)/);
-      initialScale = transform ? parseFloat(transform[1]) : 1;
-    }
-
-    kb.setPointerCapture(e.pointerId);
-  });
-
-  kb.addEventListener('pointermove', e => {
-    if (!pointers[e.pointerId]) return;
-    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
-
-    if (Object.keys(pointers).length === 1 && isDragging) {
-      kb.style.left = `${e.clientX - dragOffsetX}px`;
-      kb.style.top = `${e.clientY - dragOffsetY}px`;
-      kb.style.right = 'auto';
-      kb.style.bottom = 'auto';
-    } else if (Object.keys(pointers).length === 2) {
-      const keys = Object.keys(pointers);
-      const p1 = pointers[keys[0]];
-      const p2 = pointers[keys[1]];
-      const currentDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      const scale = initialScale * (currentDistance / initialDistance);
-      kb.style.transformOrigin = 'center center'; // ensure scaling from center
-      kb.style.transform = `scale(${Math.max(0.5, Math.min(scale, 3))})`;
-    }
-  });
-
-  kb.addEventListener('pointerup', e => { delete pointers[e.pointerId]; isDragging = false; });
-  kb.addEventListener('pointercancel', e => { delete pointers[e.pointerId]; isDragging = false; });
+});
 
   document.addEventListener('pointerdown', e => {
-    const inputs = [...document.querySelectorAll('input')];
-    const isClickInsideKeyboard = kb.contains(e.target);
-    const isClickInsideInput = inputs.some(i => i.contains(e.target));
-    if (!isClickInsideKeyboard && !isClickInsideInput) {
+    const insideKB = kb.contains(e.target);
+    const insideInput = [...document.querySelectorAll('input')].some(i => i.contains(e.target));
+    const isEyeClick = [...document.querySelectorAll('.auth-eye-icon')].some(icon => icon.contains(e.target));
+
+    if (!insideKB && !insideInput && !isEyeClick) {
       kb.style.display = 'none';
       isShift = false;
       shiftLock = false;
-      kb.style.transform = 'scale(1)';
-      if (activeInput) activeInput.removeAttribute('inputmode');
       activeInput = null;
     }
   });
