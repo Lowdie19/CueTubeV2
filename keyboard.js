@@ -80,29 +80,37 @@ export function initCustomKeyboard() {
     });
   }
 
-  function updateKeyboardPosition() {
-    const leftDrawer = document.querySelector('#leftDrawer');
-    const bottomBar = document.querySelector('#bottomBar');
-    if (!leftDrawer || !bottomBar) return;
+function updateKeyboardPosition() {
+  const leftDrawer = document.querySelector('#leftDrawer');
+  const bottomBar = document.querySelector('#bottomBar');
+  if (!leftDrawer || !bottomBar) return;
 
-    const drawerRect = leftDrawer.getBoundingClientRect();
-    const bottomRect = bottomBar.getBoundingClientRect();
-    const naturalHeight = kb.dataset.numeric === "1" ? 310 : 270;
+  const drawerRect = leftDrawer.getBoundingClientRect();
+  const bottomRect = bottomBar.getBoundingClientRect();
 
-    const availableHeight = bottomRect.top - 10;
-    const finalHeight = Math.min(naturalHeight, availableHeight);
+  // Base heights
+  let naturalHeight = kb.dataset.numeric === "1" ? 380 : 270;
 
-    kb.style.left = `${drawerRect.right}px`;
-    kb.style.bottom = `${window.innerHeight - bottomRect.top}px`;
-    kb.style.height = `${finalHeight}px`;
-
-    const availableWidth = window.innerWidth - drawerRect.right - 10;
-    kb.style.width = `${availableWidth}px`;
-
-    const scale = finalHeight / naturalHeight;
-    kb.style.transform = `scale(${scale})`;
-    kb.style.transformOrigin = "bottom left";
+  // Dynamically adjust if screen is too small
+  const availableHeight = bottomRect.top - 10;
+  if (kb.dataset.numeric === "1" && availableHeight < naturalHeight) {
+    // Shrink numeric keyboard slightly to fit small screens
+    naturalHeight = availableHeight;
   }
+
+  const finalHeight = Math.min(naturalHeight, availableHeight);
+
+  kb.style.left = `${drawerRect.right}px`;
+  kb.style.bottom = `${window.innerHeight - bottomRect.top}px`;
+  kb.style.height = `${finalHeight}px`;
+
+  const availableWidth = window.innerWidth - drawerRect.right - 10;
+  kb.style.width = `${availableWidth}px`;
+
+  const scale = finalHeight / (kb.dataset.numeric === "1" ? 380 : 270); // base scale
+  kb.style.transform = `scale(${scale})`;
+  kb.style.transformOrigin = "bottom left";
+}
 
   window.addEventListener('resize', updateKeyboardPosition);
 
