@@ -24,7 +24,7 @@ const popupCSS = `
   border: 1px solid rgba(255,255,255,0.25);
   box-shadow: inset 0 0 10px var(--frost-color), 0 8px 16px rgba(0,0,0,0.5);
   opacity: 0;
-  z-index: 5000;
+  z-index: 99999;
   text-align: center;
   transition: all 0.35s ease-out;
 }
