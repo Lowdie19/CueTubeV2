@@ -147,7 +147,9 @@ export function initCustomKeyboard() {
     const bottomRect = bottomBar.getBoundingClientRect();
 
     if (!baseHeight) {
-      baseHeight = Number(kb.dataset.numeric) ? 320 : calculateBaseHeight();
+      buildKeyboard(currentLayout);
+      kb.dataset.numeric = isNumeric ? "1" : "0";
+      baseHeight = isNumeric ? 320 : calculateBaseHeight();
     }
 
     const availableHeight = bottomRect.top - 12;
