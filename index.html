@@ -690,30 +690,30 @@
       padding: 0px 0px 10px 0px!important;
     }
 
-    /* Shrink + darken on press + cyan border for KEYBUTTON */
-    #customKeyboard button {
-      margin: 2px;
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 5px;
-      background: #333;
-      color: #fff;
-      font-size: 16px;
-      user-select: none;
-      transition: 
-          transform 0.08s ease,
-          background 0.12s ease,
-          border-color 0.25s ease,
-          box-shadow 0.25s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-    }
+/* Shrink + darken on press + cyan border for KEYBUTTON */
+#customKeyboard button {
+  margin: 2px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 5px;
+  background: #333;
+  color: #fff;
+  font-size: 16px;
+  user-select: none;
+  transition: 
+      transform 0.05s ease,   /* faster */
+      background 0.05s ease,  /* faster */
+      border-color 0.12s ease, /* still slightly slower for cyan flash */
+      box-shadow 0.12s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
 
-    #customKeyboard button.pressed {
-      transform: scale(0.88) translateY(2px);
-      transition: transform 0.1s cubic-bezier(0.4,0,0.2,1),
-                  background 0.12s ease,
-                  border-color 0.25s ease,
-                  box-shadow 0.25s ease;
-    }
+#customKeyboard button.pressed {
+  transform: scale(0.88) translateY(1px); /* subtle quick press */
+  transition: transform 0.05s cubic-bezier(0.4,0,0.2,1),
+              background 0.05s ease,
+              border-color 0.12s ease,
+              box-shadow 0.12s ease;
+}
 }
 </style>
 
