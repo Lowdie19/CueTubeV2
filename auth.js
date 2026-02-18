@@ -24,7 +24,6 @@ const myProfileDiv = document.getElementById('myProfileDiv');
 const myVolumeDiv = document.getElementById('myVolumeDiv');
 const loginEye = loginBox.querySelector('.auth-eye-icon[data-target="loginPin"]');
 const registerEye = registerBox.querySelector('.auth-eye-icon[data-target="registerPin"]');
-const loadingBlock = document.getElementById('loadingBlock');
 const logoutLink = logoutBtn.querySelector("a");
 const songInput = document.getElementById("songInput");
 
@@ -97,7 +96,6 @@ async function registerAction(){
 function bindAuthIcon(icon, action,type){
   icon.addEventListener('click',async()=>{
     playSound('clickA');
-    loadingBlock.style.display='flex';
     logoutBtn.style.display='none';
     const originalClass=icon.className;
     icon.className='fa-solid fa-circle-notch';
@@ -153,7 +151,6 @@ import('./queue.js').then(async ({ queue, renderQueue, playCurrentSong, setCurre
   }finally{
       icon.className=originalClass;
       icon.style.color=''; icon.style.animation='none'; icon.style.pointerEvents='auto';
-      loadingBlock.style.display='none';
       logoutBtn.style.display='block';
     }
     // after user logs in
