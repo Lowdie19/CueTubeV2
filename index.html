@@ -682,6 +682,18 @@
     #authContainer {
       padding: 0px 0px 10px 0px!important;
     }
+
+    #customKeyboard button {
+      margin: 2px;
+      transition: transform 0.12s cubic-bezier(0.32, 0.72, 0, 1), 
+                background 0.12s ease;
+    }
+
+    /* Shrink + darken on press */
+    #customKeyboard button:active {
+      transform: scale(0.92);
+      background: #555 !important;
+    }
 }
 </style>
 
