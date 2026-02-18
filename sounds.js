@@ -25,6 +25,7 @@
    SOUND MANAGER (Universal)
 ============================================ */
 export const sounds = {
+  blink: new Audio("assets/audio/blink.wav"),
   clickA: new Audio("assets/audio/click_A.wav"),
   clickB: new Audio("assets/audio/click_B.wav"),
   error: new Audio("assets/audio/error.wav"),
