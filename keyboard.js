@@ -230,17 +230,12 @@ function buildKeyboard(layout) {
 
     const btn = e.target;
     btn.classList.add("pressed");
-    btn.style.borderColor = "#0ff"; // cyan outline on press
+    btn.style.borderColor = "#0ff"; // cyan flash
     setTimeout(() => {
       btn.classList.remove("pressed");
-
-      // Restore normal border after press
-      if (key === "SHIFT") {
-        btn.style.borderColor = isShift ? "#0ff" : "#555"; // persist for shift
-      } else {
-        btn.style.borderColor = "#555"; // normal keys revert to gray
-      }
-    }, 180);
+      // restore normal border
+      btn.style.borderColor = (key === "SHIFT" && isShift) ? "#0ff" : "#555";
+    }, 80); // was 180 → faster, matches CSS
 
     if (key === "BACK") activeInput.value = activeInput.value.slice(0, -1);
     else if (key === "CLEAR") activeInput.value = "";
@@ -286,7 +281,7 @@ else if (key === "SHIFT") {
     // Animate tap (shrink + cyan border)
     btn.classList.add("pressed");
     btn.style.borderColor = "#0ff"; // cyan flash
-    setTimeout(() => btn.classList.remove("pressed"), 180);
+    setTimeout(() => btn.classList.remove("pressed"), 80); // faster
 
     // Rebuild keyboard after animation
     setTimeout(() => {
