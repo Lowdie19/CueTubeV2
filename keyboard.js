@@ -52,9 +52,9 @@ export function initCustomKeyboard() {
   // ----------------------------------------------------
   const alphaUpper = [
     ["Q","W","E","R","T","Y","U","I","O","P"],
-    ["A","S","D","F","G","H","J","K","L"],
-    ["Z","X","C","V","B","N","M","BACK","CLEAR"],
-    ["SHIFT","SPACE","ENTER"]
+    ["A","S","D","F","G","H","J","K","L","CLEAR"],
+    ["SHIFT","Z","X","C","V","B","N","M","BACK"],
+    ["SPACE","ENTER"]
   ];
   const alphaLower = alphaUpper.map(row =>
     row.map(k => ["SHIFT","BACK","SPACE","CLEAR","ENTER"].includes(k) ? k : k.toLowerCase())
