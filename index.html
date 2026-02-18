@@ -682,49 +682,6 @@
     #authContainer {
       padding: 0px 0px 10px 0px!important;
     }
-  
-    #customKeyboard {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      right: 0;
-      background: #222;
-      border-radius: 10px 0 0 0;
-      /* REMOVE display:none */
-      flex-wrap: wrap;
-      padding: 10px;
-      gap: 5px;
-      z-index: 9999;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
-      touch-action: none;
-    }
-
-    #customKeyboard button {
-      flex: 1 0 30%;
-      margin: 2px;
-      padding: 10px;
-      font-size: 16px;
-      border: none;
-      border-radius: 5px;
-      background: #444;
-      color: white;
-      pointer-events: auto; /* keys remain clickable */
-      
-      transition: transform 0.12s cubic-bezier(0.32, 0.72, 0, 1), 
-                background 0.12s ease;
-    }
-
-      /* Smooth animation on press */
-    #customKeyboard button {
-      transition: transform 0.08s ease, background 0.08s ease;
-    }
-
-    /* Shrink + darken on press */
-    #customKeyboard button:active {
-      transform: scale(0.92);
-      background: #555 !important;
-    }
-
 }
 </style>
 
