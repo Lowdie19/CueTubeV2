@@ -1177,34 +1177,26 @@ document.addEventListener("DOMContentLoaded", () => {
 // ------------------------------
 // DEFAULT HEIGHT FUNCTION
 // ------------------------------
-function setDefaultBottomBarHeight() {
-  const offset = 140; // minimum space from top
-  const maxDown = window.innerHeight - offset;
+function resetBottomBar() {
+  // Always stick bottom
+  bottomBar.style.bottom = "0";
+  bottomBar.style.top = "auto"; // important!
+  
+  // Optional: adjust height
+  // bottomBar.style.height = "140px"; // or leave auto
+  
+  // Right content sits above bottomBar
+  rightContent.style.bottom = bottomBar.offsetHeight + "px";
 
-  // Reset manual drag flag
-  bottomBar.dataset.manualTop = "";
-
-  // Position and height
-  bottomBar.style.top = maxDown + "px";
-  bottomBar.style.height = (window.innerHeight - maxDown) + "px";
-
-  // Right content adjusts to bottomBar
-  rightContent.style.bottom = bottomBar.style.height;
-
-  // Re-center the player vertically
   centerPlayerVertically();
 }
 
-// ------------------------------
-// INITIAL LOAD
-// ------------------------------
-window.addEventListener("DOMContentLoaded", setDefaultBottomBarHeight);
-
-// ------------------------------
-// WINDOW RESIZE
-// ------------------------------
-window.addEventListener("resize", setDefaultBottomBarHeight);
-
+// Run on load, resize, and orientation change
+window.addEventListener("DOMContentLoaded", resetBottomBar);
+window.addEventListener("resize", resetBottomBar);
+window.addEventListener("orientationchange", () => {
+setTimeout(resetBottomBar, 100); // wait for viewport to settle
+});
 
 
   // ------------------------
@@ -1222,7 +1214,7 @@ window.addEventListener("resize", setDefaultBottomBarHeight);
     
     updateLayout(!drawerOpen);
     centerPlayerVertically();
-    setDefaultBottomBarHeight();
+    resetBottomBar();
   });
   
   // Window resize
