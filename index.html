@@ -13,8 +13,14 @@
         overflow: hidden;
         background: #000;
       }
-
+      
       /* Topbar */
+      #topbarLogo {
+        height: 40px; /* adjust as needed to fit topbar */
+        width: auto;
+        margin-right: 10px; /* spacing between logo and title */
+        vertical-align: middle;
+      }
       #topbar {
         position: fixed;
         top: 0;
@@ -25,13 +31,13 @@
         color: white;
         display: flex;
         align-items: center;
-        padding: 0 20px;
         z-index: 1002;
+        padding-left: 80px;
       }
       #topbar .title {
-        margin-left: 50px;
-        font-size: 20px;
-        font-weight: bold;
+        font-size: 22px;           /* adjust size */
+        font-weight: 700;           /* bold */
+        font-family: "Arial Narrow", Arial, sans-serif; /* condensed font */
       }
 
       /* Hamburger */
@@ -731,6 +737,7 @@
     <div id="hamburger" title="Menu" data-sound="clickB">&#9776;</div>
     
     <div id="topbar">
+      <img src="assets/images/icon.png" alt="CueTube Logo" id="topbarLogo">
       <div class="title">CueTube</div>
     </div>
 
