@@ -7,16 +7,6 @@ export function initCustomKeyboard() {
 
   console.log("Custom keyboard enabled — mobile detected");
 
-// ----------------------------------------------------
-// FORCE LEFTDRAWER TO 40% WIDTH ON MOBILE
-// ----------------------------------------------------
-const leftDrawer = document.querySelector("#leftDrawer");
-if (leftDrawer) {
-  leftDrawer.style.width = "40vw";   // 40% of user screen width
-  leftDrawer.style.minWidth = "40vw";
-  leftDrawer.style.maxWidth = "40vw";
-}
-
   // ----------------------------------------------------
   // KEYBOARD CONTAINER
   // ----------------------------------------------------
@@ -35,7 +25,9 @@ if (leftDrawer) {
     userSelect: "none",
     touchAction: "none",
   });
-  document.body.appendChild(kb);
+  const rightContent = document.querySelector("#rightContent");
+  rightContent.style.position = "relative"; // ensure absolute children work
+  rightContent.appendChild(kb);
 
   // ----------------------------------------------------
   // KEY LAYOUTS
@@ -90,10 +82,24 @@ if (leftDrawer) {
   function buildKeyboard(layout) {
     kb.innerHTML = "";
     Object.assign(kb.style, {
-      display: "flex",
+      display: "none",
+      position: "absolute",
+      top: "0",
+      left: "0",
+      width: "100%",
+      height: "100%",
+      background: "rgba(0,0,0,0)", // fully transparent
+      border: "none",
+      borderRadius: "12px",
+      backdropFilter: "blur(18px)",
+      WebkitBackdropFilter: "blur(18px)",
+      boxShadow: "0 0 40px 20px rgba(0,0,0,0.35)",
+      zIndex: "9999",
+      padding: "6px",
+      boxSizing: "border-box",
       flexDirection: "column",
-      justifyContent: "center",
-      alignItems: "stretch",
+      userSelect: "none",
+      touchAction: "none",
     });
 
     layout.forEach(rowKeys => {
@@ -149,38 +155,10 @@ if (leftDrawer) {
   // POSITION + SCALE
   // ----------------------------------------------------
 function updateKeyboardPosition() {
-  const leftDrawer = document.querySelector("#leftDrawer");
-  const bottomBar  = document.querySelector("#bottomBar");
-  if (!leftDrawer || !bottomBar || !activeInput) return;
+  if (!activeInput) return;
 
-  const drawerRect = leftDrawer.getBoundingClientRect();
-  const bottomRect = bottomBar.getBoundingClientRect();
-
-  if (!baseHeight) {
-    buildKeyboard(currentLayout);
-    kb.dataset.numeric = activeInput.type === "number" ? "1" : "0";
-    baseHeight = activeInput.type === "number" ? 320 : calculateBaseHeight();
-  }
-
-  // available space above bottomBar
-  const availableHeight = bottomRect.top - 12;
-  const finalHeight = Math.min(baseHeight, availableHeight);
-
-  // width fits remaining screen
-  const availableWidth = window.innerWidth - drawerRect.right - 10;
-
-  kb.style.width  = `${availableWidth}px`;
-  kb.style.height = `${finalHeight}px`;
-
-  // scaling factor
-  const scale = finalHeight / baseHeight;
-  kb.style.transform = `scale(${scale})`;
-  kb.style.transformOrigin = "bottom left";
-
-  // position after scaling
-  const scaledHeight = finalHeight * scale;
-  kb.style.left   = `${drawerRect.right}px`;
-  kb.style.bottom = `${window.innerHeight - bottomRect.top}px`;
+  // reset scale for full area
+  kb.style.transform = "none";
 }
 
   window.addEventListener("resize", () => {
