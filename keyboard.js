@@ -7,6 +7,16 @@ export function initCustomKeyboard() {
 
   console.log("Custom keyboard enabled — mobile detected");
 
+// ----------------------------------------------------
+// FORCE LEFTDRAWER TO 40% WIDTH ON MOBILE
+// ----------------------------------------------------
+const leftDrawer = document.querySelector("#leftDrawer");
+if (leftDrawer) {
+  leftDrawer.style.width = "40vw";   // 40% of user screen width
+  leftDrawer.style.minWidth = "40vw";
+  leftDrawer.style.maxWidth = "40vw";
+}
+
   // ----------------------------------------------------
   // KEYBOARD CONTAINER
   // ----------------------------------------------------
