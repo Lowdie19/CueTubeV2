@@ -158,11 +158,11 @@ export function setupInputsC() {
 
     if (input.tagName === "TEXTAREA") input.classList.add("textarea");
 
-    /* 🔊 Hover Sound (desktop only) */
+    /* 🔊 Hover Sound (desktop only) 
     if (!isTouch) input.addEventListener("mouseenter", () => playUISoundSafe("hover"));
 
-    /* 🔊 Focus/Click Sound */
-    input.addEventListener("focus", () => playUISoundSafe("clickA"));
+    /* 🔊 Focus/Click Sound 
+    input.addEventListener("focus", () => playUISoundSafe("clickA")); */
 
     /* -----------------------
        Search icon or Enter triggers input
@@ -172,7 +172,7 @@ export function setupInputsC() {
       input.addEventListener("click", () => {
         input.dispatchEvent(new Event("input", { bubbles: true }));
         input.value = "";
-        playUISoundSafe("clickA");
+        /*playUISoundSafe("clickA");*/
       });
     }
 
@@ -180,7 +180,7 @@ export function setupInputsC() {
       if (e.key === "Enter") {
         input.dispatchEvent(new Event("input", { bubbles: true }));
         input.value = "";
-        playUISoundSafe("clickA");
+        /*playUISoundSafe("clickA");*/
       }
     });
   });
