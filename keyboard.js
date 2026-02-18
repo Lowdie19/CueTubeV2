@@ -8,6 +8,16 @@ export function initCustomKeyboard() {
   console.log("Custom keyboard enabled — mobile detected");
 
   // ----------------------------------------------------
+  // FORCE LEFTDRAWER TO 40% WIDTH ON MOBILE
+  // ----------------------------------------------------
+  const leftDrawer = document.querySelector("#leftDrawer");
+  if (leftDrawer) {
+    leftDrawer.style.width = "40vw";
+    leftDrawer.style.minWidth = "40vw";
+    leftDrawer.style.maxWidth = "40vw";
+  }
+
+  // ----------------------------------------------------
   // KEYBOARD CONTAINER
   // ----------------------------------------------------
   const kb = document.createElement("div");
@@ -25,9 +35,17 @@ export function initCustomKeyboard() {
     userSelect: "none",
     touchAction: "none",
   });
-  const rightContent = document.querySelector("#rightContent");
-  rightContent.style.position = "relative"; // ensure absolute children work
-  rightContent.appendChild(kb);
+  document.body.appendChild(kb);
+
+  let kbKeyActive = false; // ⬅️ Flag for key press
+  let activeInput = null;
+  let currentLayout = null;
+  let isShift = false;
+  let shiftLock = false;
+  let lastShiftTime = 0;
+  let baseHeight = null;
+
+  const eyeIcons = document.querySelectorAll(".auth-eye-icon");
 
   // ----------------------------------------------------
   // KEY LAYOUTS
@@ -38,26 +56,15 @@ export function initCustomKeyboard() {
     ["Z","X","C","V","B","N","M","BACK","CLEAR"],
     ["SHIFT","SPACE","ENTER"]
   ];
-
   const alphaLower = alphaUpper.map(row =>
     row.map(k => ["SHIFT","BACK","SPACE","CLEAR","ENTER"].includes(k) ? k : k.toLowerCase())
   );
-
   const numLayout = [
     ["7","8","9","CLEAR"],
     ["4","5","6","BACK"],
     ["1","2","3","PASTE"],
     ["0","ENTER"]
   ];
-
-  let currentLayout = alphaUpper;
-  let isShift = false;
-  let shiftLock = false;
-  let lastShiftTime = 0;
-  let activeInput = null;
-  let baseHeight = null;
-
-  const eyeIcons = document.querySelectorAll(".auth-eye-icon");
 
   // ----------------------------------------------------
   // CARET CENTERING HELPER
@@ -79,66 +86,54 @@ export function initCustomKeyboard() {
   // ----------------------------------------------------
   // BUILD KEYS
   // ----------------------------------------------------
-  function buildKeyboard(layout) {
+function buildKeyboard(layout) {
     kb.innerHTML = "";
+
+    // Reapply blur / semi-transparent base
     Object.assign(kb.style, {
-      display: "none",
-      position: "absolute",
-      top: "0",
-      left: "0",
-      width: "100%",
-      height: "100%",
-      background: "rgba(0,0,0,0)", // fully transparent
-      border: "none",
-      borderRadius: "12px",
-      backdropFilter: "blur(18px)",
-      WebkitBackdropFilter: "blur(18px)",
-      boxShadow: "0 0 40px 20px rgba(0,0,0,0.35)",
-      zIndex: "9999",
-      padding: "6px",
-      boxSizing: "border-box",
-      flexDirection: "column",
-      userSelect: "none",
-      touchAction: "none",
+        display: "flex",
+        position: "fixed",
+        background: "rgba(30,30,30,0.25)", // semi-transparent
+        backdropFilter: "blur(12px)",      // blur behind the keyboard
+        border: "1px solid rgba(255,255,255,0.15)", // subtle border
+        borderRadius: "10px",
+        zIndex: "99999",
+        padding: "6px",
+        boxSizing: "border-box",
+        flexDirection: "column",
+        userSelect: "none",
+        touchAction: "none",
     });
 
     layout.forEach(rowKeys => {
-      const row = document.createElement("div");
-      Object.assign(row.style, {
-        display: "flex",
-        justifyContent: "center",
-        width: "100%",
-        marginBottom: "5px",
-        gap: "4px",
-      });
+        const row = document.createElement("div");
+        Object.assign(row.style, { display: "flex", justifyContent: "center", width: "100%", marginBottom: "5px", gap: "4px" });
+        rowKeys.forEach(key => {
+            const btn = document.createElement("button");
+            btn.dataset.key = key;
+            btn.textContent =
+              key === "BACK" ? "⌫" :
+              key === "SPACE" ? "␣" :
+              key === "ENTER" ? "▶" :
+              key;
 
-      rowKeys.forEach(key => {
-        const btn = document.createElement("button");
-        btn.dataset.key = key;
-        btn.textContent =
-          key === "BACK" ? "⌫" :
-          key === "SPACE" ? "␣" :
-          key === "ENTER" ? "▶" :
-          key;
+            Object.assign(btn.style, {
+              flex: key === "SPACE" ? "5" : "1",
+              height: "42px",
+              borderRadius: "5px",
+              border: "1px solid #555",
+              background: (key === "SHIFT" && isShift) ? "#777" : "#333",
+              color: "#fff",
+              fontSize: "16px",
+              userSelect: "none",
+              transition: "transform 0.08s ease, background 0.08s ease",
+            });
 
-        Object.assign(btn.style, {
-          flex: key === "SPACE" ? "5" : "1",
-          height: "42px",
-          borderRadius: "5px",
-          border: "1px solid #555",
-          background: (key === "SHIFT" && isShift) ? "#777" : "#333",
-          color: "#fff",
-          fontSize: "16px",
-          userSelect: "none",
-          transition: "transform 0.08s ease, background 0.08s ease",
+            row.appendChild(btn);
         });
-
-        row.appendChild(btn);
-      });
-
-      kb.appendChild(row);
+        kb.appendChild(row);
     });
-  }
+}
 
   // ----------------------------------------------------
   // CALCULATE BASE HEIGHT
@@ -154,36 +149,51 @@ export function initCustomKeyboard() {
   // ----------------------------------------------------
   // POSITION + SCALE
   // ----------------------------------------------------
-function updateKeyboardPosition() {
-  if (!activeInput) return;
+  function updateKeyboardPosition() {
+    if (!activeInput) return;
+    const leftDrawer = document.querySelector("#leftDrawer");
+    const bottomBar = document.querySelector("#bottomBar");
+    if (!leftDrawer || !bottomBar) return;
 
-  // reset scale for full area
-  kb.style.transform = "none";
-}
+    if (!baseHeight) {
+      buildKeyboard(currentLayout);
+      kb.dataset.numeric = activeInput.type === "number" ? "1" : "0";
+      baseHeight = calculateBaseHeight();
+    }
+
+    const drawerRect = leftDrawer.getBoundingClientRect();
+    const bottomRect = bottomBar.getBoundingClientRect();
+    const availableHeight = bottomRect.top - 12;
+    const finalHeight = Math.min(baseHeight, availableHeight);
+    const availableWidth = window.innerWidth - drawerRect.right - 10;
+
+    kb.style.width = `${availableWidth}px`;
+    kb.style.height = `${finalHeight}px`;
+    kb.style.transform = "scale(1)";
+    kb.style.transformOrigin = "bottom left";
+    kb.style.left = `${drawerRect.right}px`;
+    kb.style.bottom = `${window.innerHeight - bottomRect.top}px`;
+  }
 
   window.addEventListener("resize", () => {
-  if (kb.style.display === "flex") {
-    // hide keyboard on rotation / resize
-    kb.style.display = "none";
-    isShift = false;
-    shiftLock = false;
-    activeInput = null;
-  }
-  // optionally recalc layout next time input opens
-  baseHeight = null;
-});
+    if (kb.style.display === "flex") {
+      kb.style.display = "none";
+      isShift = false;
+      shiftLock = false;
+      activeInput = null;
+    }
+    baseHeight = null;
+  });
 
   // ----------------------------------------------------
   // OPEN FOR INPUT
   // ----------------------------------------------------
   function openKeyboardForInput(input) {
     activeInput = input;
-
     const id = input.id.toLowerCase();
     const isNumeric = input.type === "number" || id.includes("pin") || id === "songinput";
 
     currentLayout = isNumeric ? numLayout : (isShift ? alphaUpper : alphaLower);
-
     buildKeyboard(currentLayout);
     kb.dataset.numeric = isNumeric ? "1" : "0";
     baseHeight = isNumeric ? 320 : null;
@@ -194,8 +204,6 @@ function updateKeyboardPosition() {
     const len = activeInput.value.length;
     activeInput.setSelectionRange(len, len);
     activeInput.focus();
-
-    // center caret initially
     centerCaret(activeInput);
   }
 
@@ -216,99 +224,135 @@ function updateKeyboardPosition() {
   // ----------------------------------------------------
   kb.addEventListener("click", async e => {
     if (!e.target.dataset.key || !activeInput) return;
+    kbKeyActive = true;
 
     const key = e.target.dataset.key;
 
-    if (!["SHIFT","PASTE"].includes(key)) {
-      e.target.style.transform = "scale(0.92)";
-      setTimeout(() => e.target.style.transform = "scale(1)", 80);
-    }
+    const btn = e.target;
+    btn.classList.add("pressed");
+    btn.style.borderColor = "#0ff"; // cyan outline on press
+    setTimeout(() => {
+      btn.classList.remove("pressed");
+
+      // Restore normal border after press
+      if (key === "SHIFT") {
+        btn.style.borderColor = isShift ? "#0ff" : "#555"; // persist for shift
+      } else {
+        btn.style.borderColor = "#555"; // normal keys revert to gray
+      }
+    }, 180);
 
     if (key === "BACK") activeInput.value = activeInput.value.slice(0, -1);
     else if (key === "CLEAR") activeInput.value = "";
     else if (key === "SPACE") activeInput.value += " ";
-else if (key === "ENTER") {
-  const enterBtn = e.target; // the ENTER button itself
-  playSound("clickA");
+    else if (key === "ENTER") {
+      const enterBtn = e.target;
+      playSound("clickA");
+      enterBtn.innerHTML = "";
+      const spinner = document.createElement("div");
+      Object.assign(spinner.style, {
+        border: "2px solid #fff",
+        borderTop: "2px solid transparent",
+        borderRadius: "50%",
+        width: "16px",
+        height: "16px",
+        margin: "0 auto",
+        animation: "spin 1s linear infinite",
+      });
+      enterBtn.appendChild(spinner);
+      enterBtn.disabled = true;
 
-  // create a loading spinner inside the button
-  enterBtn.innerHTML = "";
-  const spinner = document.createElement("div");
-  Object.assign(spinner.style, {
-    border: "2px solid #fff",
-    borderTop: "2px solid transparent",
-    borderRadius: "50%",
-    width: "16px",
-    height: "16px",
-    margin: "0 auto",
-    animation: "spin 1s linear infinite",
-  });
-  enterBtn.appendChild(spinner);
-  enterBtn.disabled = true;
+      activeInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      activeInput.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
 
-  // dispatch Enter key events
-  activeInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-  activeInput.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
-
-  // wait 1 second, then close keyboard and restore ENTER
-  setTimeout(() => {
-    enterBtn.textContent = "▶"; // restore original icon
-    enterBtn.disabled = false;
-    kb.style.display = "none";
-    isShift = false;
-    shiftLock = false;
-    activeInput = null;
-  }, 1000);
-}
-    else if (key === "SHIFT") {
-      const now = Date.now();
-      if (now - lastShiftTime < 400) shiftLock = !shiftLock;
-      isShift = shiftLock ? true : !isShift;
-      lastShiftTime = now;
-
-      if (kb.dataset.numeric !== "1") {
-        currentLayout = isShift ? alphaUpper : alphaLower;
-        buildKeyboard(currentLayout);
-        updateKeyboardPosition();
-      }
-      return;
+      setTimeout(() => {
+        enterBtn.textContent = "▶";
+        enterBtn.disabled = false;
+        kb.style.display = "none";
+        isShift = false;
+        shiftLock = false;
+        activeInput = null;
+      }, 1000);
     }
+    
+else if (key === "SHIFT") {
+    const now = Date.now();
+    if (now - lastShiftTime < 400) shiftLock = !shiftLock;
+    isShift = shiftLock ? true : !isShift;
+    lastShiftTime = now;
+
+    const btn = e.target;
+
+    // Animate tap (shrink + cyan border)
+    btn.classList.add("pressed");
+    btn.style.borderColor = "#0ff"; // cyan flash
+    setTimeout(() => btn.classList.remove("pressed"), 180);
+
+    // Rebuild keyboard after animation
+    setTimeout(() => {
+        if (kb.dataset.numeric !== "1") {
+            currentLayout = isShift ? alphaUpper : alphaLower;
+            buildKeyboard(currentLayout);
+            updateKeyboardPosition();
+
+            // Sticky highlight for Shift
+        const newShift = kb.querySelector('button[data-key="SHIFT"]');
+        if (newShift) {
+            newShift.style.background = isShift ? "#777" : "#333";
+            newShift.style.borderColor = isShift ? "#0ff" : "#555"; // <-- persistent cyan when active
+        }
+        }
+    }, 200); // slightly longer than pressed animation
+}
+    
     else if (key === "PASTE") {
+      const btn = e.target;
+      btn.classList.add("pressed");
+      setTimeout(() => btn.classList.remove("pressed"), 180);
+
       try {
         const txt = await navigator.clipboard.readText();
         if (txt) activeInput.value += txt;
-      } catch {}
+      } catch(err) { console.error(err); }
+
+      activeInput.dispatchEvent(new Event("input", { bubbles: true }));
+      centerCaret(activeInput);
       return;
     }
-    else activeInput.value += key;
+    else {
+      // Regular character key
+      activeInput.value += key;
 
-    // auto-unshift
-    if (!shiftLock && kb.dataset.numeric !== "1" && isShift) {
-      isShift = false;
-      currentLayout = alphaLower;
-      buildKeyboard(currentLayout);
-      updateKeyboardPosition();
+      // Reset temporary Shift only for normal letters, not numbers or special keys
+      const specialKeys = ["BACK", "CLEAR", "SPACE", "ENTER", "PASTE"];
+      if (!shiftLock && kb.dataset.numeric !== "1" && isShift && !specialKeys.includes(key)) {
+        isShift = false;
+        currentLayout = alphaLower;
+        buildKeyboard(currentLayout);
+        updateKeyboardPosition();
+      }
     }
 
     activeInput.dispatchEvent(new Event("input", { bubbles: true }));
-
-    // center caret after every key
     centerCaret(activeInput);
   });
 
   // ----------------------------------------------------
-  // CLICK OUTSIDE CLOSES KEYBOARD (but NOT eye icons)
+  // CLICK OUTSIDE CLOSES KEYBOARD
   // ----------------------------------------------------
   document.addEventListener("pointerdown", e => {
-    const insideKB = kb.contains(e.target);
+    if (kb.contains(e.target)) return;
     const insideInput = [...document.querySelectorAll("input")].some(i => i.contains(e.target));
     const isEye = [...eyeIcons].includes(e.target);
 
-    if (!insideKB && !insideInput && !isEye) {
-      kb.style.display = "none";
-      isShift = false;
-      shiftLock = false;
-      activeInput = null;
+    if (insideInput || isEye || kbKeyActive) {
+      kbKeyActive = false; // reset flag
+      return;
     }
+
+    kb.style.display = "none";
+    isShift = false;
+    shiftLock = false;
+    activeInput = null;
   });
 }
