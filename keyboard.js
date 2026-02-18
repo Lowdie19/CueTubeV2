@@ -221,10 +221,39 @@ export function initCustomKeyboard() {
     if (key === "BACK") activeInput.value = activeInput.value.slice(0, -1);
     else if (key === "CLEAR") activeInput.value = "";
     else if (key === "SPACE") activeInput.value += " ";
-    else if (key === "ENTER") {
-      activeInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-      activeInput.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
-    }
+else if (key === "ENTER") {
+  const enterBtn = e.target; // the ENTER button itself
+  playSound("clickA");
+
+  // create a loading spinner inside the button
+  enterBtn.innerHTML = "";
+  const spinner = document.createElement("div");
+  Object.assign(spinner.style, {
+    border: "2px solid #fff",
+    borderTop: "2px solid transparent",
+    borderRadius: "50%",
+    width: "16px",
+    height: "16px",
+    margin: "0 auto",
+    animation: "spin 1s linear infinite",
+  });
+  enterBtn.appendChild(spinner);
+  enterBtn.disabled = true;
+
+  // dispatch Enter key events
+  activeInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  activeInput.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+
+  // wait 1 second, then close keyboard and restore ENTER
+  setTimeout(() => {
+    enterBtn.textContent = "▶"; // restore original icon
+    enterBtn.disabled = false;
+    kb.style.display = "none";
+    isShift = false;
+    shiftLock = false;
+    activeInput = null;
+  }, 1000);
+}
     else if (key === "SHIFT") {
       const now = Date.now();
       if (now - lastShiftTime < 400) shiftLock = !shiftLock;
