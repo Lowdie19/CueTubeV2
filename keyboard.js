@@ -42,11 +42,10 @@ export function initCustomKeyboard() {
   );
 
   const numLayout = [
-    ["CLEAR","BACK"],
-    ["1","2","3"],
-    ["4","5","6"],
-    ["7","8","9"],
-    ["PASTE","0","ENTER"]
+    ["7","8","9","CLEAR"],
+    ["4","5","6","BACK"],
+    ["1","2","3","PASTE"],
+    ["0","ENTER"]
   ];
 
   let currentLayout = alphaUpper;
