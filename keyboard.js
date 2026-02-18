@@ -56,61 +56,74 @@ export function initCustomKeyboard() {
   let activeInput = null;
   let baseHeight = null;
 
-  // Eye icons (prevent keyboard close)
   const eyeIcons = document.querySelectorAll(".auth-eye-icon");
+
+  // ----------------------------------------------------
+  // CARET CENTERING HELPER
+  // ----------------------------------------------------
+  function centerCaret(input) {
+    const inputWidth = input.clientWidth;
+    const span = document.createElement("span");
+    span.style.visibility = "hidden";
+    span.style.position = "absolute";
+    span.style.whiteSpace = "pre";
+    span.style.font = window.getComputedStyle(input).font;
+    span.textContent = input.value.slice(0, input.selectionEnd);
+    document.body.appendChild(span);
+    const textWidth = span.offsetWidth;
+    document.body.removeChild(span);
+    input.scrollLeft = Math.max(0, textWidth - inputWidth / 2);
+  }
 
   // ----------------------------------------------------
   // BUILD KEYS
   // ----------------------------------------------------
-function buildKeyboard(layout) {
-  kb.innerHTML = "";
-
-  // Make keyboard a vertical flex container with centered content
-  Object.assign(kb.style, {
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center", // <-- vertical center the keys block
-    alignItems: "stretch",    // stretch rows horizontally
-  });
-
-  layout.forEach(rowKeys => {
-    const row = document.createElement("div");
-    Object.assign(row.style, {
+  function buildKeyboard(layout) {
+    kb.innerHTML = "";
+    Object.assign(kb.style, {
       display: "flex",
+      flexDirection: "column",
       justifyContent: "center",
-      width: "100%",
-      marginBottom: "5px",
-      gap: "4px",
+      alignItems: "stretch",
     });
 
-    rowKeys.forEach(key => {
-      const btn = document.createElement("button");
-      btn.dataset.key = key;
-
-      btn.textContent =
-        key === "BACK" ? "⌫" :
-        key === "SPACE" ? "␣" :
-        key === "ENTER" ? "▶" :
-        key;
-
-      Object.assign(btn.style, {
-        flex: key === "SPACE" ? "5" : "1",
-        height: "42px",
-        borderRadius: "5px",
-        border: "1px solid #555",
-        background: (key === "SHIFT" && isShift) ? "#777" : "#333",
-        color: "#fff",
-        fontSize: "16px",
-        userSelect: "none",
-        transition: "transform 0.08s ease, background 0.08s ease",
+    layout.forEach(rowKeys => {
+      const row = document.createElement("div");
+      Object.assign(row.style, {
+        display: "flex",
+        justifyContent: "center",
+        width: "100%",
+        marginBottom: "5px",
+        gap: "4px",
       });
 
-      row.appendChild(btn);
-    });
+      rowKeys.forEach(key => {
+        const btn = document.createElement("button");
+        btn.dataset.key = key;
+        btn.textContent =
+          key === "BACK" ? "⌫" :
+          key === "SPACE" ? "␣" :
+          key === "ENTER" ? "▶" :
+          key;
 
-    kb.appendChild(row);
-  });
-}
+        Object.assign(btn.style, {
+          flex: key === "SPACE" ? "5" : "1",
+          height: "42px",
+          borderRadius: "5px",
+          border: "1px solid #555",
+          background: (key === "SHIFT" && isShift) ? "#777" : "#333",
+          color: "#fff",
+          fontSize: "16px",
+          userSelect: "none",
+          transition: "transform 0.08s ease, background 0.08s ease",
+        });
+
+        row.appendChild(btn);
+      });
+
+      kb.appendChild(row);
+    });
+  }
 
   // ----------------------------------------------------
   // CALCULATE BASE HEIGHT
@@ -118,9 +131,7 @@ function buildKeyboard(layout) {
   function calculateBaseHeight() {
     kb.style.visibility = "hidden";
     kb.style.display = "flex";
-
     const height = kb.scrollHeight;
-
     kb.style.visibility = "visible";
     return height;
   }
@@ -166,13 +177,11 @@ function buildKeyboard(layout) {
     const id = input.id.toLowerCase();
     const isNumeric = input.type === "number" || id.includes("pin") || id === "songinput";
 
-    currentLayout = isNumeric ? numLayout :
-      (isShift ? alphaUpper : alphaLower);
+    currentLayout = isNumeric ? numLayout : (isShift ? alphaUpper : alphaLower);
 
     buildKeyboard(currentLayout);
-
     kb.dataset.numeric = isNumeric ? "1" : "0";
-    baseHeight = isNumeric ? 320 : null; // numeric fixed
+    baseHeight = isNumeric ? 320 : null;
 
     kb.style.display = "flex";
     updateKeyboardPosition();
@@ -180,6 +189,9 @@ function buildKeyboard(layout) {
     const len = activeInput.value.length;
     activeInput.setSelectionRange(len, len);
     activeInput.focus();
+
+    // center caret initially
+    centerCaret(activeInput);
   }
 
   // ----------------------------------------------------
@@ -202,7 +214,6 @@ function buildKeyboard(layout) {
 
     const key = e.target.dataset.key;
 
-    // animation (except shift/paste)
     if (!["SHIFT","PASTE"].includes(key)) {
       e.target.style.transform = "scale(0.92)";
       setTimeout(() => e.target.style.transform = "scale(1)", 80);
@@ -246,6 +257,9 @@ function buildKeyboard(layout) {
     }
 
     activeInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    // center caret after every key
+    centerCaret(activeInput);
   });
 
   // ----------------------------------------------------
@@ -263,6 +277,4 @@ function buildKeyboard(layout) {
       activeInput = null;
     }
   });
-
-
 }
