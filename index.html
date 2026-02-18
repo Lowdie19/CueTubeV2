@@ -683,20 +683,29 @@
       padding: 0px 0px 10px 0px!important;
     }
 
+    /* Shrink + darken on press + cyan border for KEYBUTTON */
     #customKeyboard button {
       margin: 2px;
-      transition: transform 0.12s cubic-bezier(0.32, 0.72, 0, 1), 
-                background 0.12s ease;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 5px;
+      background: #333;
+      color: #fff;
+      font-size: 16px;
+      user-select: none;
+      transition: 
+          transform 0.08s ease,
+          background 0.12s ease,
+          border-color 0.25s ease,
+          box-shadow 0.25s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
     }
 
-    /* Shrink + darken on press */
-    #customKeyboard button:active {
-      transform: scale(0.92);
-      background: #555 !important;
-    }
-
-    #customKeyboard > div { /* each row */
-      margin: auto; /* push rows to bottom */
+    #customKeyboard button.pressed {
+      transform: scale(0.88) translateY(2px);
+      transition: transform 0.1s cubic-bezier(0.4,0,0.2,1),
+                  background 0.12s ease,
+                  border-color 0.25s ease,
+                  box-shadow 0.25s ease;
     }
 }
 </style>
@@ -1182,15 +1191,11 @@ document.addEventListener("DOMContentLoaded", () => {
 // DEFAULT HEIGHT FUNCTION
 // ------------------------------
 function resetBottomBar() {
-  // Always stick bottom
-  bottomBar.style.bottom = "0";
-  bottomBar.style.top = "auto"; // important!
-  
-  // Optional: adjust height
-  // bottomBar.style.height = "140px"; // or leave auto
-  
-  // Right content sits above bottomBar
-  rightContent.style.bottom = bottomBar.offsetHeight + "px";
+  if (!bottomBar.dataset.manualTop) { // only reset if NOT manually dragged
+    bottomBar.style.bottom = "0";
+    bottomBar.style.top = "auto"; // important
+    rightContent.style.bottom = bottomBar.offsetHeight + "px";
+  }
 
   centerPlayerVertically();
 }
@@ -1254,6 +1259,7 @@ setTimeout(resetBottomBar, 100); // wait for viewport to settle
     startY = e.clientY;
     startTop = parseInt(bottomBar.style.top) || bottomBar.getBoundingClientRect().top;
     bottomBar.dataset.manualTop = "true"; // mark manual drag
+    resetBottomBar();
     
     // Disable text selection while dragging
     document.body.style.userSelect = "none";
