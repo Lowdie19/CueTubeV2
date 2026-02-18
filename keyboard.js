@@ -138,36 +138,52 @@ export function initCustomKeyboard() {
   // ----------------------------------------------------
   // POSITION + SCALE
   // ----------------------------------------------------
-  function updateKeyboardPosition() {
-    const leftDrawer = document.querySelector("#leftDrawer");
-    const bottomBar  = document.querySelector("#bottomBar");
-    if (!leftDrawer || !bottomBar) return;
+function updateKeyboardPosition() {
+  const leftDrawer = document.querySelector("#leftDrawer");
+  const bottomBar  = document.querySelector("#bottomBar");
+  if (!leftDrawer || !bottomBar || !activeInput) return;
 
-    const drawerRect = leftDrawer.getBoundingClientRect();
-    const bottomRect = bottomBar.getBoundingClientRect();
+  const drawerRect = leftDrawer.getBoundingClientRect();
+  const bottomRect = bottomBar.getBoundingClientRect();
 
-    if (!baseHeight) {
-      buildKeyboard(currentLayout);
-      kb.dataset.numeric = isNumeric ? "1" : "0";
-      baseHeight = isNumeric ? 320 : calculateBaseHeight();
-    }
-
-    const availableHeight = bottomRect.top - 12;
-    const finalHeight = Math.min(baseHeight, availableHeight);
-
-    kb.style.left   = `${drawerRect.right}px`;
-    kb.style.bottom = `${window.innerHeight - bottomRect.top}px`;
-    kb.style.height = `${finalHeight}px`;
-
-    const availableWidth = window.innerWidth - drawerRect.right - 10;
-    kb.style.width = `${availableWidth}px`;
-
-    const scale = finalHeight / baseHeight;
-    kb.style.transform = `scale(${scale})`;
-    kb.style.transformOrigin = "bottom left";
+  if (!baseHeight) {
+    buildKeyboard(currentLayout);
+    kb.dataset.numeric = activeInput.type === "number" ? "1" : "0";
+    baseHeight = activeInput.type === "number" ? 320 : calculateBaseHeight();
   }
 
-  window.addEventListener("resize", updateKeyboardPosition);
+  // available space above bottomBar
+  const availableHeight = bottomRect.top - 12;
+  const finalHeight = Math.min(baseHeight, availableHeight);
+
+  // width fits remaining screen
+  const availableWidth = window.innerWidth - drawerRect.right - 10;
+
+  kb.style.width  = `${availableWidth}px`;
+  kb.style.height = `${finalHeight}px`;
+
+  // scaling factor
+  const scale = finalHeight / baseHeight;
+  kb.style.transform = `scale(${scale})`;
+  kb.style.transformOrigin = "bottom left";
+
+  // position after scaling
+  const scaledHeight = finalHeight * scale;
+  kb.style.left   = `${drawerRect.right}px`;
+  kb.style.bottom = `${window.innerHeight - bottomRect.top}px`;
+}
+
+  window.addEventListener("resize", () => {
+  if (kb.style.display === "flex") {
+    // hide keyboard on rotation / resize
+    kb.style.display = "none";
+    isShift = false;
+    shiftLock = false;
+    activeInput = null;
+  }
+  // optionally recalc layout next time input opens
+  baseHeight = null;
+});
 
   // ----------------------------------------------------
   // OPEN FOR INPUT
