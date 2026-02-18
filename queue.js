@@ -231,27 +231,9 @@ export function renderQueue() {
 
     const trash = document.createElement('i');
     trash.className = 'fa-solid fa-trash-can tab-icons';
-    trash.addEventListener('click', (e) => {
-      e.stopPropagation();
-      playSound("clickA");
-      askConfirm({
-        title: "Remove from Queue",
-        message: `
-          Are you sure you want to remove<br>
-          <span style="color: cyan;">${song.title}</span><br>
-          from the queue?
-        `,
-        theme: "cyan",
-        onYes: () => {
-          requestAnimationFrame(() => div.classList.add('delete-anim'));
-          playSound("trash");
-          setTimeout(() => {
-            removeFromQueue(i);
-            renderQueue();
-          }, 350);
-        }
-      });
-    });
+
+    // ✅ Use helper function
+    trash.addEventListener('click', createTrashClickHandler(i, song, div));
 
     div.appendChild(trash);
     queueItems.push(div);
@@ -259,17 +241,45 @@ export function renderQueue() {
 
   // Append queue-items **regardless of tab**, but hide if tab inactive
   queueItems.forEach(item => queueListDiv.appendChild(item));
-
 }
 
+function createTrashClickHandler(index, song, divEl) {
+  return (e) => {
+    e.stopPropagation();
+    playSound("clickA");
+    askConfirm({
+      title: "Remove from Queue",
+      message: `
+        Are you sure you want to remove<br>
+        <span style="color: cyan;">${song.title}</span><br>
+        from the queue?
+      `,
+      theme: "cyan",
+      onYes: () => {
+        requestAnimationFrame(() => divEl.classList.add('delete-anim'));
+        playSound("trash");
+        setTimeout(() => {
+          removeFromQueue(index);
+          renderQueue();
+        }, 350);
+      }
+    });
+  };
+}
+
+
 // ------------------------------
-// ADD TO QUEUE (enhanced with per-user temporary save)
+// ADD TO QUEUE (allow duplicates)
 // ------------------------------
 export async function addToQueue(songObj) {
+  if (!songObj?.id && !songObj?.url) return;
+
   const wasEmpty = queue.length === 0;
+
+  // Add song directly, duplicates are allowed
   queue.push(songObj);
 
-  // Save to Firestore per user (temporary queue)
+  // Save to Firestore if user is logged in
   if (isUserLoggedIn()) {
     const user = getCurrentUser();
     try {
@@ -279,11 +289,10 @@ export async function addToQueue(songObj) {
     }
   }
 
-  // Calculate position in queue (exclude currently playing song)
+  // Determine position for notification
   const reserveNumber = queue.length - 1; 
 
   let notifMessage = "";
-
   if (reserveNumber === 0) {
     notifMessage = songObj.title;
   } else if (reserveNumber === 1) {
@@ -308,13 +317,8 @@ export async function addToQueue(songObj) {
       ">No. ${reserveNumber}</span>`;
   }
 
-  setTimeout(() => {
-    showPopup("Added to Queue! ✅", 2000, "cyan");
-  }, 800);
-  
-  setTimeout(() => {
-    showNotification("NEW SONG ADDED", notifMessage);
-  }, 4000);
+  setTimeout(() => showPopup("Added to Queue! ✅", 2000, "cyan"), 800);
+  setTimeout(() => showNotification("NEW SONG ADDED", notifMessage), 4000);
 
   renderQueue();
 
@@ -341,52 +345,46 @@ export async function removeFromQueue(index) {
 }
 
 // ------------------------------
-// SYNC EXISTING QUEUE WHEN USER LOGS IN + FORCE PLAY IF NEEDED
+// SYNC EXISTING QUEUE WHEN USER LOGS IN + MERGE OFFLINE RESERVES (ALLOW DUPLICATES)
 // ------------------------------
 export async function handleLoginSync() {
   try {
     const { loadQueue, saveQueue } = await import('./firebase-init.js');
-    const { getCurrentUser } = await import('./firebase-init.js');
 
     const user = getCurrentUser();
     if (!user) return;
-
     const username = user.username;
 
-    // load Firestore queue
-    const savedQueue = await loadQueue(username);
+    // 1️⃣ Load Firestore queue safely
+    const firestoreQueue = Array.isArray(await loadQueue(username)) ? await loadQueue(username) : [];
 
-    // Merge local queue + Firestore
-    const merged = [...queue];
+    // 2️⃣ Offline queue (may have reserved songs before login)
+    const offlineQueue = Array.isArray(queue) ? [...queue] : [];
 
-    for (const song of savedQueue) {
-      if (!merged.find(s => s.url === song.url)) {
-        merged.push(song);
-      }
-    }
+    // 3️⃣ Merge queues: duplicates ALLOWED
+    const mergedQueue = [...firestoreQueue, ...offlineQueue];
 
-    // Apply merged queue
+    // 4️⃣ Apply merged queue to local queue
     queue.length = 0;
-    merged.forEach(s => queue.push(s));
+    mergedQueue.forEach(song => queue.push(song));
+
+    console.log("Merged queue on login (duplicates allowed):", queue);
+
     renderQueue();
 
-    // 🎯 AUTO-PLAY LOGIC
-    if (queue.length > 0) {
-      // If idle was playing and Firestore queue is not empty → play queue
-      if (idleMode) {
-        currentSongIndex = 0;
-        playCurrentSong();
-      }
+    // 5️⃣ Auto-play if idle
+    if (queue.length > 0 && idleMode) {
+      currentSongIndex = 0;
+      playCurrentSong();
     }
 
-    // Save merged queue back to Firestore
+    // 6️⃣ Save merged queue back to Firestore
     await saveQueue(username, queue);
 
   } catch (err) {
     console.error("Failed to sync queue on login:", err);
   }
 }
-
 
 
 // ------------------------------
@@ -563,7 +561,7 @@ async function nextSongBtnAction() {
   }
 
   if (queue.length === 0) {
-    showPopup('No songs in queue ❌', 2000, 'red');
+    showPopup('No songs in queue! ❌', 2000, 'red');
     nextIdleSong();
     return;
   }
@@ -635,57 +633,100 @@ function clearSongbookSearch() {
 
 
 // ------------------------------
-// ACTION BUTTON DROPUP
+// SONG INPUT ACTION (URL OR NUMBER)
 // ------------------------------
-if (actionBtn && actionDropdown) {
+if (songInput && actionBtn && actionDropdown) {
+  // Pre-select default action (reserve)
+  const defaultBtn = actionDropdown.querySelector('button[data-action="reserve"]');
+  if (defaultBtn) defaultBtn.classList.add('active');
+  
   const tabSongbook = document.getElementById('tabSongbook');
   const tabQueue = document.getElementById('tabQueue');
 
+  // 🔹 Fixed: function expression instead of declaration
+  const handleSongInput = async () => {
+    const value = songInput.value.trim();
+    if (!value) return showPopup('Paste song URL / link or<br>Input 4-digit song number first! ❌', 2000, 'red');
+
+    const action = actionDropdown.querySelector('button[data-action].active')?.dataset.action || 'reserve';
+
+    // ----------------------------
+    // RESERVE ACTION
+    // ----------------------------
+    if (action === 'reserve') {
+      let songObj = null;
+
+      // 1️⃣ If input is a number → lookup in songbook
+      if (/^\d+$/.test(value)) {
+        const songNumber = parseInt(value);
+        const { songbook } = await import('./songbook.js');
+        const song = songbook.find(s => s.songNumber === songNumber);
+
+        if (!song || !song.id) return showPopup('Song number not found! ❌', 2000, 'red');
+        songObj = { id: song.id, title: song.title };
+      } else {
+        // 2️⃣ Otherwise, treat as YouTube URL
+        const id = extractVideoID(value);
+        if (!id) return showPopup('Invalid song URL / link! ❌', 2000, 'red');
+
+        const title = await fetchYouTubeTitle(id);
+        songObj = { id, title };
+      }
+
+      if (songObj) {
+        await addToQueue(songObj);
+        tabQueue?.click(); // switch to queue tab
+      }
+    }
+
+    // ----------------------------
+    // SAVE ACTION (YouTube URL only)
+    // ----------------------------
+    if (action === 'save') {
+      const id = extractVideoID(value);
+      if (!id) return showPopup('Invalid song URL / link! ❌', 2000, 'red');
+      if (!isUserLoggedIn()) return showPopup('Login first to save! ❌', 2000, 'red');
+
+      const title = await fetchYouTubeTitle(id);
+      const { addSongToSongbook } = await import('./songbook.js');
+      await addSongToSongbook({ id, title, url: value });
+      refreshSuggestions();
+      showPopup(`Saved to Songbook! ✅`, 2000, 'green');
+      tabSongbook?.click();
+    }
+
+    songInput.value = '';
+    actionDropdown.style.display = 'none';
+  };
+
+  // Click on action button opens the dropdown (UI toggle)
   actionBtn.addEventListener('click', () => {
     actionDropdown.style.display = actionDropdown.style.display === 'flex' ? 'none' : 'flex';
   });
 
-actionDropdown.querySelectorAll('button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const action = btn.dataset.action;
-    const url = songInput.value.trim();
-    if (!url) return showPopup('Paste a YouTube link first ❌', 2000, 'red');
-
-    const id = extractVideoID(url);
-    if (!id) return showPopup('Invalid YouTube link ❌', 2000, 'red');
-
-    fetchYouTubeTitle(id).then(title => {
-      if (action === 'reserve') {
-        addToQueue({ id, title });
-        tabQueue.click();
-      }
-
-      if (action === 'save') {
-        // 🔹 Check if user is logged in
-        if (!isUserLoggedIn()) {
-          return showPopup('Please login first to save to Songbook ❌', 2500, 'red');
-        }
-
-        import('./songbook.js').then(async ({ addSongToSongbook }) => {
-          const videoId = extractVideoID(url);
-          await addSongToSongbook({ title, url, id: videoId });
-          refreshSuggestions();
-          showPopup('Saved to Songbook! ✅', 2000, 'green');
-          tabSongbook.click();
-        });
-      }
-    });
-
-    songInput.value = '';
-    actionDropdown.style.display = 'none';
+  // Pressing Enter triggers the selected action
+  songInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleSongInput();
   });
-});
 
+  // Click on dropdown buttons triggers the same handler
+  actionDropdown.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.add('active');
+      actionDropdown.querySelectorAll('button[data-action]').forEach(b => {
+        if (b !== btn) b.classList.remove('active');
+      });
+      handleSongInput();
+    });
+  });
+
+  // Close dropdown if clicked outside
   document.addEventListener('click', (e) => {
     if (!actionBtn.contains(e.target) && !actionDropdown.contains(e.target))
       actionDropdown.style.display = 'none';
   });
 }
+
 
 // ------------------------------
 // TAB SWITCH LISTENERS
