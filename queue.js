@@ -35,21 +35,37 @@ export function subscribeToUserQueue() {
     lastQueueSnapshot = [...serverQueue];
 
     // 🔹 Trigger popups/notifications for new songs
-newSongs.forEach(song => {
-  const positionNumber = queue.findIndex(s => s.id === song.id);
-  
-  let notifMessage = "";
-  if (positionNumber === 0) {
-    notifMessage = song.title;
-  } else if (positionNumber === 1) {
-    notifMessage = `${song.title} <span style="margin-left:8px;color:gray;font-weight:bold;background:rgba(128,128,128,0.25);padding:3px 8px;border-radius:6px;">Next</span>`;
-  } else {
-    notifMessage = `${song.title} <span style="margin-left:8px;color:gray;font-weight:bold;background:rgba(128,128,128,0.25);padding:3px 8px;border-radius:6px;">No. ${positionNumber}</span>`;
-  }
+    newSongs.forEach(song => {
+      const positionNumber = serverQueue.findIndex(s => s.id === song.id);
 
-  showPopup("Added to Queue! ✅", 2000, "cyan");
-  showNotification("NEW SONG ADDED", notifMessage);
-});
+      let notifMessage = "";
+      if (positionNumber === 0) {
+        notifMessage = song.title;
+      } else if (positionNumber === 1) {
+        notifMessage =
+          `${song.title} <span style="
+            margin-left:8px;
+            color:gray;
+            font-weight:bold;
+            background:rgba(128,128,128,0.25);
+            padding:3px 8px;
+            border-radius:6px;
+          ">Next</span>`;
+      } else {
+        notifMessage =
+          `${song.title} <span style="
+            margin-left:8px;
+            color:gray;
+            font-weight:bold;
+            background:rgba(128,128,128,0.25);
+            padding:3px 8px;
+            border-radius:6px;
+          ">No. ${positionNumber}</span>`;
+      }
+
+      showPopup("Added to Queue! ✅", 2000, "cyan");
+      showNotification("NEW SONG ADDED", notifMessage);
+    });
 
     // 🔹 Update local queue
     queue.length = 0;
