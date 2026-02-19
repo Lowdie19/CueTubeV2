@@ -11,9 +11,9 @@ import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/fireb
 
 // Firestore real-time listener
 let unsubscribeQueueListener = null;
+let lastQueueSnapshot = [];
 
 export function subscribeToUserQueue() {
-  // Stop previous listener
   if (unsubscribeQueueListener) unsubscribeQueueListener();
 
   const user = getCurrentUser();
@@ -27,23 +27,37 @@ export function subscribeToUserQueue() {
 
     const serverQueue = data.queue;
 
-    // 🔹 Prevent feedback loop: only update if serverQueue differs
-    const localIds = queue.map(s => s.id);
-    const serverIds = serverQueue.map(s => s.id);
-    const isSame = localIds.length === serverIds.length &&
-                   localIds.every((id, idx) => id === serverIds[idx]);
-    if (isSame) return;
+    // 🔹 Detect new songs
+    const lastIds = lastQueueSnapshot.map(s => s.id);
+    const newSongs = serverQueue.filter(s => !lastIds.includes(s.id));
 
-    console.log("Queue updated from Firestore:", serverQueue);
+    // 🔹 Update last snapshot
+    lastQueueSnapshot = [...serverQueue];
 
-    // Merge while keeping current local index
+    // 🔹 Trigger popups/notifications for new songs
+newSongs.forEach(song => {
+  const positionNumber = queue.findIndex(s => s.id === song.id);
+  
+  let notifMessage = "";
+  if (positionNumber === 0) {
+    notifMessage = song.title;
+  } else if (positionNumber === 1) {
+    notifMessage = `${song.title} <span style="margin-left:8px;color:gray;font-weight:bold;background:rgba(128,128,128,0.25);padding:3px 8px;border-radius:6px;">Next</span>`;
+  } else {
+    notifMessage = `${song.title} <span style="margin-left:8px;color:gray;font-weight:bold;background:rgba(128,128,128,0.25);padding:3px 8px;border-radius:6px;">No. ${positionNumber}</span>`;
+  }
+
+  showPopup("Added to Queue! ✅", 2000, "cyan");
+  showNotification("NEW SONG ADDED", notifMessage);
+});
+
+    // 🔹 Update local queue
     queue.length = 0;
     serverQueue.forEach(song => queue.push(song));
 
-    // Reset index safely if needed
     if (currentSongIndex >= queue.length) currentSongIndex = 0;
-
     renderQueue();
+    updateUpNextBox();
 
     // Auto-play first song if idle
     if (idleMode && queue.length > 0) playCurrentSong();
