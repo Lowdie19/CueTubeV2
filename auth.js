@@ -50,8 +50,8 @@ function clearAuthInputs() {
 function resetPinEye(input, icon) { input.type="password"; icon.classList.replace('fa-eye-slash','fa-eye'); }
 
 // Switch buttons
-goRegister.addEventListener('click', e=>{e.preventDefault(); showRegister(); clearAuthInputs(); resetPinEye(loginPin,loginEye); resetPinEye(registerPin,registerEye);});
-goLogin.addEventListener('click', e=>{e.preventDefault(); showLogin(); clearAuthInputs(); resetPinEye(loginPin,loginEye); resetPinEye(registerPin,registerEye);});
+goRegister.addEventListener('click', e=>{e.preventDefault(); playSound("clickD"); showRegister(); clearAuthInputs(); resetPinEye(loginPin,loginEye); resetPinEye(registerPin,registerEye);});
+goLogin.addEventListener('click', e=>{e.preventDefault(); playSound("clickD"); showLogin(); clearAuthInputs(); resetPinEye(loginPin,loginEye); resetPinEye(registerPin,registerEye);});
 
 // Input listeners
 [loginUsername,loginPin].forEach(el=>el.addEventListener('input',()=>{ loginPlayIcon.style.display=(loginUsername.value&&loginPin.value)?'inline-block':'none'; }));
