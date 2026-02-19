@@ -6,8 +6,57 @@ import { openModal } from './ui/ui-modals.js';
 import { createScoreModal, showScore } from './ui/ui-score.js';
 import { updateFloatingSuggestions, refreshSuggestions } from './floating-suggestions.js';
 import { isUserLoggedIn, getCurrentUser } from './auth.js';
-import { saveQueue } from './firebase-init.js';
+import { saveQueue, db } from './firebase-init.js';
+import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+// Firestore real-time listener
+let unsubscribeQueueListener = null;
+
+export function subscribeToUserQueue() {
+  // Stop previous listener
+  if (unsubscribeQueueListener) unsubscribeQueueListener();
+
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const userRef = doc(db, "users", user.username);
+
+  unsubscribeQueueListener = onSnapshot(userRef, (snap) => {
+    const data = snap.data();
+    if (!data || !Array.isArray(data.queue)) return;
+
+    const serverQueue = data.queue;
+
+    // 🔹 Prevent feedback loop: only update if serverQueue differs
+    const localIds = queue.map(s => s.id);
+    const serverIds = serverQueue.map(s => s.id);
+    const isSame = localIds.length === serverIds.length &&
+                   localIds.every((id, idx) => id === serverIds[idx]);
+    if (isSame) return;
+
+    console.log("Queue updated from Firestore:", serverQueue);
+
+    // Merge while keeping current local index
+    queue.length = 0;
+    serverQueue.forEach(song => queue.push(song));
+
+    // Reset index safely if needed
+    if (currentSongIndex >= queue.length) currentSongIndex = 0;
+
+    renderQueue();
+
+    // Auto-play first song if idle
+    if (idleMode && queue.length > 0) playCurrentSong();
+  });
+}
+
+// Stop listening when user logs out
+export function unsubscribeQueue() {
+  if (unsubscribeQueueListener) {
+    unsubscribeQueueListener();
+    unsubscribeQueueListener = null;
+  }
+}
 
 // ------------------------------
 // DOM ELEMENTS
@@ -390,6 +439,7 @@ export async function handleLoginSync() {
   } catch (err) {
     console.error("Failed to sync queue on login:", err);
   }
+  subscribeToUserQueue();
 }
 
 
