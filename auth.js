@@ -166,7 +166,7 @@ bindAuthIcon(registerPlayIcon, registerAction,'register');
 // -----------------------
 logoutLink.addEventListener('click', e => {
   e.stopPropagation();
-  playSound('clickB');
+  playSound('clickA');
 
   askConfirm({
     title: "Confirm Logout",
