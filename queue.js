@@ -42,7 +42,8 @@ export function getCurrentSongIndex() {
 }
 
 let currentSongIndex = 0;
-let player = null;
+export let player = null;  // keep it exported
+window.player = player;    // expose globally for score modal
 let idleMode = true;
 
 // Notification timers
@@ -87,9 +88,13 @@ function initYTPlayer() {
     height: '360',
     width: '640',
     events: {
-      onReady: () => {initIdlePlaylist(); playIdleSong();},
+      onReady: () => {
+        window.player = player;   // <- add this line
+        initIdlePlaylist(); 
+        playIdleSong();
+      },
       onStateChange: (event) => {
-          if (event.data === YT.PlayerState.ENDED) (async () => await handleSongEnded())();
+        if (event.data === YT.PlayerState.ENDED) (async () => await handleSongEnded())();
       }
     }
   });
