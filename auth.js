@@ -229,10 +229,47 @@ logoutLink.addEventListener('click', e => {
 });
 
 // -----------------------
-// Enter key submission
+// Enter key submission with popups
 // -----------------------
-[loginUsername,loginPin].forEach(input=>input.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault(); if(loginUsername.value&&loginPin.value) loginPlayIcon.click(); }}));
-[registerUsername,registerPin].forEach(input=>input.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault(); if(registerUsername.value&&registerPin.value) registerPlayIcon.click(); }}));
+[loginUsername, loginPin].forEach(input => {
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+
+      if (!loginUsername.value || !loginPin.value) {
+        showPopup('Enter username and PIN first! ❌', 2500, 'red');
+        return;
+      }
+      if (loginPin.value.length !== 4) {
+        showPopup('PIN must be 4 digits! ❌', 2500, 'red');
+        return;
+      }
+
+      // trigger click if valid
+      loginPlayIcon.click();
+    }
+  });
+});
+
+[registerUsername, registerPin].forEach(input => {
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+
+      if (!registerUsername.value || !registerPin.value) {
+        showPopup('Enter username and PIN first! ❌', 2500, 'red');
+        return;
+      }
+      if (registerPin.value.length !== 4 || isNaN(registerPin.value)) {
+        showPopup('PIN must be 4 digits! ❌', 2500, 'red');
+        return;
+      }
+
+      // trigger click if valid
+      registerPlayIcon.click();
+    }
+  });
+});
 
 // -----------------------
 // Auth state listener (on page load)
