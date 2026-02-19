@@ -19,7 +19,7 @@ function safeHoverSound() {
   if (hoverSoundLock) return; // ignore if still locked
 
   hoverSoundLock = true;
-  playSound("hover");
+ /* playSound("hover");*/
 
   // unlock after sound finishes (approx 150ms)
   clearTimeout(hoverSoundTimer);
@@ -123,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       btn.addEventListener("pointerdown", e => {
         if (!isBtnX) createRipple(e, btn, themeColor);
-        playSound("clickA"); // click sound
+        //playSound("clickA"); // click sound
 
         if (!isBtnX) {
           btn.classList.add('tap-animate');
