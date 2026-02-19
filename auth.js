@@ -172,29 +172,34 @@ logoutLink.addEventListener('click', e => {
     title: "Confirm Logout",
     message: "Are you sure you want to logout?",
     theme: "cyan",
+
     onYes: async () => {
       const orig = logoutLink.textContent;
       logoutLink.textContent = 'Logging out...';
       logoutLink.style.pointerEvents = 'none';
 
       try {
-        const { queue, setCurrentSongIndex, renderQueue, stopCurrentPlayback, unsubscribeQueue } = await import('./queue.js');
+        // 🔥 IMPORT SHARED QUEUE MODULE (same instance)
+        const { queue, setCurrentSongIndex, renderQueue } = await import('./queue.js');
         const { saveQueue } = await import('./firebase-init.js');
 
+        // 🔥 SAVE username BEFORE logout destroys it
         const username = _currentUser?.username || null;
 
-        // Clear local queue & reset player
+        // 🔥 CLEAR LOCAL QUEUE
         queue.length = 0;
         setCurrentSongIndex(0);
-        renderQueue();
-        stopCurrentPlayback();
-
-        // Stop real-time Firestore listener
         unsubscribeQueue();
+        renderQueue();
 
-        // Clear Firestore queue
-        if (username) await saveQueue(username, []);
+        // 🔥 CLEAR FIRESTORE QUEUE
+        if (username) {
+          await saveQueue(username, []);
+        }
 
+        console.log("Queue cleared locally + Firestore.");
+
+        // 🔥 CONTINUE LOGOUT FLOW
         await logoutUser();
         _currentUser = null;
         triggerAuthChange();
@@ -212,13 +217,18 @@ logoutLink.addEventListener('click', e => {
 
       } catch (err) {
         showPopup(err.message || 'Logout failed ❌', 3000, 'red');
+
       } finally {
         logoutLink.textContent = orig;
         logoutLink.style.pointerEvents = 'auto';
       }
+        import('./queue.js').then(({ stopCurrentPlayback }) => {
+          stopCurrentPlayback();
+        });
     }
   });
-}
+  unsubscribeQueue();
+});
 
 // -----------------------
 // Enter key submission with popups
