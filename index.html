@@ -639,6 +639,52 @@
         0%, 100% { transform: rotate(0deg); }
         50% { transform: rotate(15deg); }
       }
+      
+      /* ------------------------------
+         GENERIC AUTO-HIDE SCROLLBAR
+         Fade-in effect on hover
+         Works for all scrollable elements
+      ------------------------------ */
+
+      /* Wrapper for all scrollable elements */
+      * {
+          position: relative; /* ensures thumb positioning works */
+          scrollbar-width: thin; /* Firefox default */
+          scrollbar-color: transparent transparent; /* hidden by default */
+          transition: scrollbar-color 0.3s ease;
+      }
+
+      /* Firefox: show thumb on hover */
+      *:hover {
+          scrollbar-color: #bfbfbf transparent; /* thumb visible, track hidden */
+      }
+
+      /* Chrome, Edge, Safari */
+      *::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+          opacity: 0;                  /* hide normally */
+          transition: opacity 0.25s ease;
+      }
+
+      *:hover::-webkit-scrollbar {
+          opacity: 1;                  /* fade-in on hover */
+      }
+
+      *::-webkit-scrollbar-track {
+          background: transparent !important; /* track hidden */
+      }
+
+      *::-webkit-scrollbar-thumb {
+          background: #bfbfbf;           /* thumb color */
+          border-radius: 6px;
+          transition: opacity 0.4s ease, background 0.3s ease;
+      }
+
+      /* Optional: hide horizontal scrollbar completely */
+      *::-webkit-scrollbar:horizontal {
+          display: none !important;
+      }
 </style>
   
   
