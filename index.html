@@ -639,6 +639,12 @@
         0%, 100% { transform: rotate(0deg); }
         50% { transform: rotate(15deg); }
       }
+
+      #ui-notification {
+        top: 10px;
+        right: 10px;
+        max-width: 200px;
+      }
       
       /* ------------------------------
          GENERIC AUTO-HIDE SCROLLBAR
@@ -737,7 +743,7 @@
       padding: 0px 0px 10px 0px!important;
     }
     #ui-notification {
-      left: 40px!important;
+      left: 45px!important;
       
     /* Shrink + darken on press + cyan border for KEYBUTTON */
     #customKeyboard button {
@@ -1294,6 +1300,7 @@ setTimeout(resetBottomBar, 100); // wait for viewport to settle
   bottomDragHandle.style.top = "0"; // stick to top of bottomBar
   bottomDragHandle.style.cursor = "ns-resize";
   bottomDragHandle.style.background = "rgba(0, 0, 0, 0)"; // original color
+  bottomDragHandle.style.zIndex = "899";
 
   bottomDragHandle.style.transition = "background 0.5s ease";
   
