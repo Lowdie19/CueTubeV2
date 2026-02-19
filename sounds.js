@@ -36,12 +36,12 @@ export const sounds = {
   
 };
 
-let volume = 1;
+window.volume = 1;
 
 export function playSound(name) {
   const s = sounds[name];
   if (s) {
-    s.volume = volume;
+    s.volume = window.volume; // use global
     s.currentTime = 0;
     s.play().catch(() => {});
   }
