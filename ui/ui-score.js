@@ -236,6 +236,11 @@ export function createScoreModal(id="scoreModal") {
    Show Score Modal
 ============================ */
 export function showScore(id="scoreModal", duration=3000) {
+  
+  // MUTE background YT player
+  if (window.player && typeof window.player.mute === 'function') {
+    window.player.mute();
+  }
   const modal = document.getElementById(id) || createScoreModal(id);
   const scoreEl = modal.querySelector(`#${id}-value`);
   const messageEl = modal.querySelector(`#${id}-message`);
@@ -456,6 +461,12 @@ function launchConfetti(canvas) {
    Close Modal (same as ui-modals.js)
 ============================ */
 function closeScore(modal){
+  
+  // UNMUTE YT player after score modal
+  if (window.player && typeof window.player.unMute === 'function') {
+    window.player.unMute();
+  }
+
   modal.classList.add("modal-closing");
   modal.classList.remove("modal-open");
 
