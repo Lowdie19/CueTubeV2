@@ -56,7 +56,7 @@ export function renderSongbook(filtered = null) {
         <a href="https://www.youtube.com/results?search_query=karaoke" target="_blank" class="youtube-link">YouTube ↗</a><br><br>
         <span style="color:#ff00ff; font-weight:bold;">Step 2</span>: Copy the full URL.<br><br>
         <span style="color:#ff00ff; font-weight:bold;">Step 3</span>: Paste into 
-        <span id="focusUrlBox" class="action-hover">URL Input box</span>, press <b>Action</b>, then <b>Save</b>.<br><br>
+        <span id="focusUrlBox" class="action-hover">Input box</span>, press <b>Action</b>, then <b>Save</b>.<br><br>
         <b>Action type:</b><br>
         <span style="color:#00ffff; font-weight:bold;">Save</span> - Songbook<br>
         <span style="color:#00ffff; font-weight:bold;">Reserve</span> - Queue
@@ -109,6 +109,7 @@ export function renderSongbook(filtered = null) {
     plusIcon.className = "fa-solid fa-circle-plus songbook-plus-icon";
 
     plusIcon.addEventListener("click", async (e) => {
+      playSound('clickA');
       e.stopPropagation();
       if (!song.id) {
         showPopup('Cannot add song without a valid video ID ❌', 2000, 'red');
