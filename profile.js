@@ -141,7 +141,7 @@ export async function loadProfile(username, container) {
         pickerOpen = !pickerOpen;
         const drawer = document.getElementById("profilePickerDrawer");
         if (pickerOpen) {
-            playSound("clickB");
+           // playSound("clickB");
             showProfilePicker(profileIcon, nameText, (changes) => {
                 if (changes.icon) profileIcon.innerHTML = changes.icon;
                 if (changes.color) {
@@ -223,7 +223,7 @@ export async function loadProfile(username, container) {
 
         // ENTER EDIT MODE
         if (!nameText.isContentEditable) {
-            playSound("clickB");
+           // playSound("clickB");
             oldName = nameText.textContent;
             lastSelection = { ...savedSelection };
             nameText.contentEditable = "true";
@@ -341,7 +341,7 @@ export async function loadProfile(username, container) {
     // CANCEL / AUTO-CLOSE
     cancelX.addEventListener("click", () => {
         if (!nameText.isContentEditable) return;
-        playSound("hover");
+       // playSound("hover");
 
         cancelX.classList.add("cancel-press");
         setTimeout(() => cancelX.classList.remove("cancel-press"), 300);
