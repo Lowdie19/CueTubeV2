@@ -10,9 +10,9 @@ const notifCSS = `
   position: absolute;
   top: 20px;
   left: 20px;
+  right: auto;
   background: rgba(0,0,0,0.72);
   padding: 18px 20px;
-  border-left: none;
   border-radius: 8px;
   color: white;
   font-family: Arial, sans-serif;
@@ -20,12 +20,12 @@ const notifCSS = `
   font-size: 14px;
   max-width: 260px;
   opacity: 0;
-  transform: translateX(-40px);
+  transform: translateX(40px);  /* slide in from right */
   pointer-events: auto;
   z-index: 99999;
   backdrop-filter: blur(4px);
   box-shadow: 0 0 12px rgba(0,0,0,0.6);
-  transition: opacity .4s ease, transform .4s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease;
   cursor: pointer;
 }
 
@@ -92,7 +92,7 @@ notifBox.innerHTML = `
   </div>
 `;
 
-const target = document.querySelector("#notif-container") || document.body;
+const target = document.querySelector("#rightContent") || document.body;
 target.appendChild(notifBox);
 
 // Detect Windows OS
