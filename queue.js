@@ -173,6 +173,7 @@ function updateUpNextBox() {
     titleSpan.style.whiteSpace = 'normal';
     titleSpan.style.wordBreak = 'break-word';
     titleSpan.style.lineHeight = '1.25em';
+    titleSpan.style.paddingRight = '45px';
 
     const trash = document.createElement('i');
     trash.className = 'fa-solid fa-trash-can tab-icons';
