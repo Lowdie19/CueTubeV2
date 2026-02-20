@@ -11,7 +11,8 @@ import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/fireb
 
 // Firestore real-time listener
 let unsubscribeQueueListener = null;
-let lastQueueSnapshot = [];
+let lastQueueSnapshot = []; // keeps track of what we already notified about
+let firstSnapshotHandled = false;
 
 export function subscribeToUserQueue() {
   if (unsubscribeQueueListener) unsubscribeQueueListener();
@@ -27,47 +28,50 @@ export function subscribeToUserQueue() {
 
     const serverQueue = data.queue;
 
-    // 🔹 Detect new songs
-    const lastIds = lastQueueSnapshot.map(s => s.id);
-    const newSongs = serverQueue.filter(s => !lastIds.includes(s.id));
+    // 🔹 Determine if this is the first snapshot after login
+    const isRestore = !firstSnapshotHandled && queue.length === 0 && serverQueue.length > 0;
 
-    // 🔹 Update last snapshot
-    lastQueueSnapshot = [...serverQueue];
+    if (isRestore) {
+      showPopup("Previous Queue Restored! ✅", 2500, "cyan");
+    }
 
-    // 🔹 Trigger popups/notifications for new songs
-    newSongs.forEach(song => {
-      const positionNumber = serverQueue.findIndex(s => s.id === song.id);
+    // 🔹 Detect truly new songs (skip for first snapshot restore)
+    // 🔹 Detect truly new songs (skip for first snapshot restore)
+    let newSongs = [];
+    if (firstSnapshotHandled) {
+      // Count occurrences in previous snapshot
+      const lastCounts = lastQueueSnapshot.reduce((acc, s) => {
+        acc[s.id] = (acc[s.id] || 0) + 1;
+        return acc;
+      }, {});
 
+      const currentCounts = {}; // Track counts while iterating
+      serverQueue.forEach((song, idx) => {
+        currentCounts[song.id] = (currentCounts[song.id] || 0) + 1;
+
+        const previousCount = lastCounts[song.id] || 0;
+
+        // Only push if this occurrence is new
+        if (currentCounts[song.id] > previousCount) {
+          // Keep position in queue for correct "(No. x)"
+          newSongs.push({ ...song, positionNumber: idx });
+        }
+      });
+    }
+
+    newSongs.forEach((song) => {
       let notifMessage = "";
-      if (positionNumber === 0) {
-        notifMessage = song.title;
-      } else if (positionNumber === 1) {
-        notifMessage =
-          `${song.title} <span style="
-            margin-left:8px;
-            color:gray;
-            font-weight:bold;
-            background:rgba(128,128,128,0.25);
-            padding:3px 8px;
-            border-radius:6px;
-          ">Next</span>`;
-      } else {
-        notifMessage =
-          `${song.title} <span style="
-            margin-left:8px;
-            color:gray;
-            font-weight:bold;
-            background:rgba(128,128,128,0.25);
-            padding:3px 8px;
-            border-radius:6px;
-          ">No. ${positionNumber}</span>`;
-      }
+      if (song.positionNumber === 0) notifMessage = song.title;
+      else if (song.positionNumber === 1)
+        notifMessage = `${song.title} <span style="margin-left:8px;color:gray;font-weight:bold;background:rgba(128,128,128,0.25);padding:3px 8px;border-radius:6px;">Next</span>`;
+      else
+        notifMessage = `${song.title} <span style="margin-left:8px;color:gray;font-weight:bold;background:rgba(128,128,128,0.25);padding:3px 8px;border-radius:6px;">No. ${song.positionNumber}</span>`;
 
       showPopup("Added to Queue! ✅", 2000, "cyan");
       showNotification("NEW SONG ADDED", notifMessage);
     });
 
-    // 🔹 Update local queue
+    // 🔹 Update local queue to match Firestore
     queue.length = 0;
     serverQueue.forEach(song => queue.push(song));
 
@@ -75,11 +79,15 @@ export function subscribeToUserQueue() {
     renderQueue();
     updateUpNextBox();
 
-    // Auto-play first song if idle
+    // 🔹 Auto-play first song if idle
     if (idleMode && queue.length > 0) playCurrentSong();
+
+    // 🔹 Update lastQueueSnapshot to include all current songs
+    lastQueueSnapshot = [...queue];
+
+    firstSnapshotHandled = true; // mark first snapshot as processed
   });
 }
-
 // Stop listening when user logs out
 export function unsubscribeQueue() {
   if (unsubscribeQueueListener) {
@@ -357,57 +365,22 @@ function createTrashClickHandler(index, song, divEl) {
 // ADD TO QUEUE (allow duplicates)
 // ------------------------------
 export async function addToQueue(songObj) {
-  if (!songObj?.id && !songObj?.url) return;
+  if (!songObj?.id) return;
 
-  const wasEmpty = queue.length === 0;
+  queue.push(songObj); // push locally
 
-  // Add song directly, duplicates are allowed
-  queue.push(songObj);
-
-  // Save to Firestore if user is logged in
   if (isUserLoggedIn()) {
     const user = getCurrentUser();
     try {
-      await saveQueue(user.username, queue);
+      await saveQueue(user.username, queue); // Firestore snapshot triggers notification
     } catch (err) {
       console.error("Failed to save queue to Firestore:", err);
     }
   }
 
-  // Determine position for notification
-  const reserveNumber = queue.length - 1; 
-
-  let notifMessage = "";
-  if (reserveNumber === 0) {
-    notifMessage = songObj.title;
-  } else if (reserveNumber === 1) {
-    notifMessage = `${songObj.title} 
-      <span style="
-        margin-left:8px;
-        color: gray; 
-        font-weight: bold;
-        background: rgba(128,128,128,0.25);
-        padding: 3px 8px;
-        border-radius: 6px;
-      ">Next</span>`;
-  } else {
-    notifMessage = `${songObj.title} 
-      <span style="
-        margin-left:8px;
-        color: gray; 
-        font-weight: bold;
-        background: rgba(128,128,128,0.25);
-        padding: 3px 8px;
-        border-radius: 6px;
-      ">No. ${reserveNumber}</span>`;
-  }
-
-  setTimeout(() => showPopup("Added to Queue! ✅", 2000, "cyan"), 800);
-  setTimeout(() => showNotification("NEW SONG ADDED", notifMessage), 4000);
-
   renderQueue();
 
-  if (wasEmpty) {
+  if (queue.length === 1 && idleMode) {
     currentSongIndex = 0;
     playCurrentSong();
   }
@@ -456,7 +429,12 @@ export async function handleLoginSync() {
     console.log("Merged queue on login (duplicates allowed):", queue);
 
     renderQueue();
-
+    
+    // New popups
+    if (mergedQueue.length > 0) {
+      showPopup("Previous Queue Restored! ✅", 2500, "cyan");
+    }
+    
     // 5️⃣ Auto-play if idle
     if (queue.length > 0 && idleMode) {
       currentSongIndex = 0;
