@@ -189,7 +189,20 @@ logoutLink.addEventListener('click', e => {
         // 🔥 CLEAR LOCAL QUEUE
         queue.length = 0;
         setCurrentSongIndex(0);
+        import('./queue.js').then(async ({ queue, setCurrentSongIndex, renderQueue, unsubscribeQueue, stopCurrentPlayback }) => {
+
+        // 🔥 CLEAR LOCAL QUEUE
+        queue.length = 0;
+        setCurrentSongIndex(0);
+
+        // 🔥 STOP QUEUE LISTENER
         unsubscribeQueue();
+
+        renderQueue();
+
+        // 🔥 STOP CURRENT PLAYBACK
+        stopCurrentPlayback();
+        });
         renderQueue();
 
         // 🔥 CLEAR FIRESTORE QUEUE
@@ -227,7 +240,6 @@ logoutLink.addEventListener('click', e => {
         });
     }
   });
-  unsubscribeQueue();
 });
 
 // -----------------------
