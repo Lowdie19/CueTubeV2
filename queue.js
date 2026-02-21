@@ -610,7 +610,7 @@ export async function handleSongEnded() {
     setTimeout(() => showScore(), 200);
   } else {
     idleMode = true;
-    playIdleSong();
+    nextIdleSong();
   }
 }
 
@@ -925,3 +925,4 @@ export function stopCurrentPlayback(startIdle = true) {
     console.error("Failed to stop player:", err);
   }
 }
+
