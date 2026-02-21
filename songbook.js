@@ -4,6 +4,7 @@ import { addToQueue } from "./queue.js";
 import { refreshSuggestions } from "./floating-suggestions.js";
 import { isUserLoggedIn, getCurrentUser, onAuthChange } from "./auth.js";
 import { loadSongbook, saveSongbook } from "./firebase-init.js";
+import { askConfirm } from "./ui/ui-modals.js";
 
 const tabSongbook = document.getElementById("tabSongbook");
 const tabQueue = document.getElementById("tabQueue");
@@ -20,6 +21,13 @@ style.textContent = `
 .songbook-plus-icon { font-size: 16px; color: #ccc; cursor: pointer; opacity: 0; transition: opacity 0.2s ease, transform 0.15s ease, color 0.15s ease; }
 .songItem:hover .songbook-plus-icon { opacity: 1; transform: scale(1.2); color: cyan; }
 .songbook-plus-icon:active { transform: scale(0.85); color: red; }
+@keyframes sbDelete {
+  from { opacity: 1; transform: translateX(0); filter: blur(0); }
+  to   { opacity: 0; transform: translateX(-22px); filter: blur(3px); }
+}
+.delete-anim {
+  animation: sbDelete 0.32s ease forwards;
+}
 `;
 document.head.appendChild(style);
 
@@ -79,65 +87,151 @@ export function renderSongbook(filtered = null) {
   }
 
   // Render songs
-  validSongs.forEach((song, index) => {
-    const div = document.createElement("div");
-    div.classList.add("songItem");
-    div.dataset.index = index;
-    div.style.display = "flex";
-    div.style.alignItems = "center";
-    div.style.justifyContent = "space-between";
-    div.style.cursor = "pointer";
-    div.style.borderBottom = "1px solid #333";
-    div.style.gap = "20px";
+let activeTrashItem = null; // keep track of which song is showing trash
 
-    // SONG NUMBER span
-    const numberSpan = document.createElement("span");
-    numberSpan.textContent = song.songNumber ?? "----"; // fallback if missing
-    numberSpan.style.color = "cyan";
-    numberSpan.style.fontWeight = "bold";
-    numberSpan.style.width = "40px"; // fixed width to align numbers
-    numberSpan.style.flexShrink = "0";
+validSongs.forEach((song, index) => {
+  const div = document.createElement("div");
+  div.classList.add("songItem");
+  div.dataset.index = index;
+  div.style.display = "flex";
+  div.style.alignItems = "center";
+  div.style.justifyContent = "space-between";
+  div.style.cursor = "pointer";
+  div.style.borderBottom = "1px solid #333";
+  div.style.gap = "20px";
 
-    // Title span
-    const titleSpan = document.createElement("span");
-    titleSpan.textContent = song.title;
-    titleSpan.style.flex = "1";
-    titleSpan.style.wordBreak = "break-word";
+  const numberSpan = document.createElement("span");
+  numberSpan.textContent = song.songNumber ?? "----";
+  numberSpan.style.color = "cyan";
+  numberSpan.style.fontWeight = "bold";
+  numberSpan.style.width = "40px";
+  numberSpan.style.flexShrink = "0";
 
-    // Plus icon
-    const plusIcon = document.createElement("i");
-    plusIcon.className = "fa-solid fa-circle-plus songbook-plus-icon";
+  const titleSpan = document.createElement("span");
+  titleSpan.textContent = song.title;
+  titleSpan.style.flex = "1";
+  titleSpan.style.wordBreak = "break-word";
 
-    plusIcon.addEventListener("click", async (e) => {
-      playSound('clickA');
-      e.stopPropagation();
-      if (!song.id) {
-        showPopup('Cannot add song without a valid video ID ❌', 2000, 'red');
-        return;
-      }
+  // Reserve icon
+  const plusIcon = document.createElement("i");
+  plusIcon.className = "fa-solid fa-circle-plus songbook-plus-icon";
+  plusIcon.style.cursor = "pointer";
 
-      plusIcon.classList.remove("fa-circle-plus");
-      plusIcon.classList.add("fa-circle-notch");
-      plusIcon.style.color = "cyan";
-      plusIcon.style.animation = "spin 0.9s linear infinite";
-      plusIcon.style.pointerEvents = "none";
+  plusIcon.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    playSound("clickA");
+    if (!song.id) {
+      showPopup("Cannot add song without a valid video ID ❌", 2000, "red");
+      return;
+    }
 
-      try {
-        await addToQueue({ title: song.title, id: song.id });
-        await new Promise(res => setTimeout(res, 800));
-      } finally {
-        plusIcon.classList.remove("fa-circle-notch");
-        plusIcon.classList.add("fa-circle-plus");
-        plusIcon.style.color = "";
-        plusIcon.style.animation = "none";
-        plusIcon.style.pointerEvents = "auto";
+    plusIcon.classList.remove("fa-circle-plus");
+    plusIcon.classList.add("fa-circle-notch");
+    plusIcon.style.color = "cyan";
+    plusIcon.style.animation = "spin 0.9s linear infinite";
+    plusIcon.style.pointerEvents = "none";
+
+    try {
+      await addToQueue({ title: song.title, id: song.id });
+      await new Promise((res) => setTimeout(res, 800));
+    } finally {
+      plusIcon.classList.remove("fa-circle-notch");
+      plusIcon.classList.add("fa-circle-plus");
+      plusIcon.style.color = "";
+      plusIcon.style.animation = "none";
+      plusIcon.style.pointerEvents = "auto";
+    }
+  });
+
+  // Trash icon
+  const trashIcon = document.createElement("i");
+  trashIcon.className = "fa-solid fa-trash-can songbook-plus-icon";
+  trashIcon.style.color = "red";
+  trashIcon.style.cursor = "pointer";
+  trashIcon.style.display = "none";
+
+  trashIcon.addEventListener("click", (e) => {
+    e.stopPropagation();
+    playSound("clickA");
+
+    askConfirm({
+      title: "Delete from Songbook",
+      message: `
+        Are you sure you want to delete<br>
+        <span style="color: cyan;">${song.title}</span><br>
+        from your songbook?
+      `,
+      theme: "cyan",
+
+      onYes: async () => {
+        // 🌟 SAME TECHNIQUE AS QUEUE.JS
+        requestAnimationFrame(() => div.classList.add("delete-anim"));
+        playSound("trash");
+        
+        // Wait for animation to finish
+        setTimeout(async () => {
+          songbook.splice(index, 1);
+
+          if (isUserLoggedIn()) {
+            const user = getCurrentUser();
+            await saveSongbook(user.username, songbook);
+          }
+
+          renderSongbook();
+        }, 320);
       }
     });
-
-    // Append all: number, title, plus icon
-    div.append(numberSpan, titleSpan, plusIcon);
-    songbookListDiv.appendChild(div);
   });
+
+  // ---------------------------
+  // Double-tap / double-click to toggle
+  // ---------------------------
+  let lastTap = 0;
+  div.addEventListener("pointerdown", (e) => {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+
+    if (tapLength < 400 && tapLength > 0) {
+      // If another item has trash active, reset it
+      if (activeTrashItem && activeTrashItem !== div) {
+        const prevPlus = activeTrashItem.querySelector(".fa-circle-plus");
+        const prevTrash = activeTrashItem.querySelector(".fa-trash-can");
+        prevPlus.style.display = "inline-block";
+        prevTrash.style.display = "none";
+      }
+
+      // Toggle current item
+      if (plusIcon.style.display !== "none") {
+        plusIcon.style.display = "none";
+        trashIcon.style.display = "inline-block";
+        activeTrashItem = div; // set as active
+      } else {
+        plusIcon.style.display = "inline-block";
+        trashIcon.style.display = "none";
+        activeTrashItem = null;
+      }
+    }
+
+    lastTap = currentTime;
+  });
+
+  // Append all
+  div.append(numberSpan, titleSpan, plusIcon, trashIcon);
+  songbookListDiv.appendChild(div);
+});
+
+// ---------------------------
+// Click outside resets active trash
+// ---------------------------
+document.addEventListener("pointerdown", (e) => {
+  if (activeTrashItem && !activeTrashItem.contains(e.target)) {
+    const prevPlus = activeTrashItem.querySelector(".fa-circle-plus");
+    const prevTrash = activeTrashItem.querySelector(".fa-trash-can");
+    prevPlus.style.display = "inline-block";
+    prevTrash.style.display = "none";
+    activeTrashItem = null;
+  }
+});
 }
 
 
