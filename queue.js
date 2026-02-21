@@ -117,6 +117,18 @@ const confirmModalYes = document.getElementById('confirmModalYes');
 const confirmModalNo = document.getElementById('confirmModalNo');
 const confirmModalClose = confirmModal.querySelector('.btnX');
 
+const style = document.createElement("style");
+style.textContent = `
+@keyframes queueDelete {
+  from { opacity: 1; transform: translateX(0); filter: blur(0); }
+  to   { opacity: 0; transform: translateX(-22px); filter: blur(3px); }
+}
+.queue-item.delete-anim {
+  animation: queueDelete 0.32s ease forwards;
+}
+`;
+document.head.appendChild(style);
+
 // ------------------------------
 // STATE
 // ------------------------------
@@ -264,22 +276,30 @@ function updateUpNextBox() {
 
     const trash = document.createElement('i');
     trash.className = 'fa-solid fa-trash-can tab-icons';
+
     trash.addEventListener('click', (e) => {
       e.stopPropagation();
       playSound("clickA");
 
       askConfirm({
         title: "Remove from Queue",
-        message: `Are you sure you want to remove<br><span style="color: cyan;">${nextSong.title}</span><br>from the queue?`,
+        message: `
+          Are you sure you want to remove<br>
+          <span style="color: cyan;">${nextSong.title}</span><br>
+          from the queue?
+        `,
         theme: "cyan",
         onYes: async () => {
+          // 🌟 Animate deletion
           requestAnimationFrame(() => wrapper.classList.add('delete-anim'));
           playSound("trash");
+
+          // Wait for animation to finish
           setTimeout(async () => {
             queue.splice(nextIndex, 1);
             renderQueue();
-            await syncQueueToFirestore(); // ✅ Firestore updated
-          }, 350);
+            await syncQueueToFirestore(); // Firestore updated
+          }, 320); // match animation duration
         }
       });
     });
@@ -299,7 +319,6 @@ function updateUpNextBox() {
     upNextBox.classList.remove("visible");
   }
 }
-
 
 
 // ------------------------------
@@ -340,6 +359,7 @@ function createTrashClickHandler(index, song, divEl) {
   return (e) => {
     e.stopPropagation();
     playSound("clickA");
+
     askConfirm({
       title: "Remove from Queue",
       message: `
@@ -348,13 +368,15 @@ function createTrashClickHandler(index, song, divEl) {
         from the queue?
       `,
       theme: "cyan",
-      onYes: () => {
-        requestAnimationFrame(() => divEl.classList.add('delete-anim'));
+      onYes: async () => {
+        requestAnimationFrame(() => divEl.classList.add("delete-anim"));
         playSound("trash");
-        setTimeout(() => {
-          removeFromQueue(index);
+
+        setTimeout(async () => {
+          queue.splice(index, 1);
           renderQueue();
-        }, 350);
+          await syncQueueToFirestore();
+        }, 320); // match animation duration
       }
     });
   };
@@ -925,4 +947,3 @@ export function stopCurrentPlayback(startIdle = true) {
     console.error("Failed to stop player:", err);
   }
 }
-
