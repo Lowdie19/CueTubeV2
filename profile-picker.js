@@ -1,6 +1,7 @@
 /* ============================================
    PROFILE ICON & COLOR PICKER DRAWER
 ============================================ */
+
 export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
   // Remove existing drawer if any
   const existing = document.getElementById('profilePickerDrawer');
@@ -25,6 +26,10 @@ export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
   drawer.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
   drawer.style.transform = 'translateY(-10px)';
   drawer.style.zIndex = '9999';
+
+  // Allow scroll if too tall
+  drawer.style.maxHeight = '65vh';
+  drawer.style.overflow = 'hidden';
 
   // Position drawer below profile icon
   const iconRect = mainProfileIcon.getBoundingClientRect();
@@ -105,6 +110,9 @@ export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
   iconContainer.style.gridTemplateColumns = 'repeat(auto-fit, 32px)';
   iconContainer.style.gap = '8px';
   iconContainer.style.width = '100%';
+  iconContainer.style.maxHeight = '40vh';   // scroll area height
+  iconContainer.style.overflowY = 'auto';   // only icons scroll
+  iconContainer.style.paddingRight = '6px'; // avoid scrollbar overlap
   drawer.appendChild(iconContainer);
 
   let selectedIcon = null;
@@ -117,7 +125,6 @@ export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
     iEl.style.cursor = 'pointer';
     iEl.style.transition = 'all 0.2s ease';
 
-    // Hover animation
     iEl.addEventListener('mouseenter', () => {
       iEl.style.transform = 'scale(1.3)';
       iEl.style.color = 'cyan';
@@ -129,7 +136,6 @@ export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
       iEl.style.textShadow = (selectedIcon === ic) ? '0 0 8px cyan' : 'none';
     });
 
-    // Click selection
     iEl.addEventListener('click', () => {
       selectedIcon = ic;
       mainProfileIcon.innerHTML = `<i class="fa-solid ${ic}" style="color:white; font-size:24px;"></i>`;
@@ -147,4 +153,37 @@ export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
 
     iconContainer.appendChild(iEl);
   });
+
+  /* ---------------------------------------------------------
+     📌 SAFE POSITIONING — prevents touching screen edges
+  --------------------------------------------------------- */
+  function repositionDrawer() {
+    const margin = 12;
+    const rect = drawer.getBoundingClientRect();
+
+    let top = parseInt(drawer.style.top);
+    let left = parseInt(drawer.style.left);
+
+    // Prevent bottom overflow
+    if (rect.bottom > window.innerHeight - margin) {
+      top = window.innerHeight - rect.height - margin;
+    }
+
+    // Prevent top overflow
+    if (top < margin) top = margin;
+
+    // Prevent right overflow
+    if (rect.right > window.innerWidth - margin) {
+      left = window.innerWidth - rect.width - margin;
+    }
+
+    // Prevent left overflow
+    if (left < margin) left = margin;
+
+    drawer.style.top = top + 'px';
+    drawer.style.left = left + 'px';
+  }
+
+  // Recalculate AFTER icons render
+  requestAnimationFrame(() => repositionDrawer());
 }
