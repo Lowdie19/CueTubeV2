@@ -1,13 +1,18 @@
-/* ============================================
+/* ============================================ 
    PROFILE ICON & COLOR PICKER DRAWER
 ============================================ */
 
 export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
   // Remove existing drawer if any
   const existing = document.getElementById('profilePickerDrawer');
-  if (existing) existing.remove();
+  if (existing) {
+    if (existing.cleanup) existing.cleanup();
+    existing.remove();
+  }
 
-  // Create drawer container
+  // -----------------------------
+  // CREATE DRAWER
+  // -----------------------------
   const drawer = document.createElement('div');
   drawer.id = 'profilePickerDrawer';
   drawer.style.position = 'absolute';
@@ -26,23 +31,9 @@ export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
   drawer.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
   drawer.style.transform = 'translateY(-10px)';
   drawer.style.zIndex = '9999';
-
-  // Allow scroll if too tall
-  drawer.style.maxHeight = '65vh';
   drawer.style.overflow = 'hidden';
 
-  // Position drawer below profile icon
-  const iconRect = mainProfileIcon.getBoundingClientRect();
-  drawer.style.top = iconRect.bottom + window.scrollY + 8 + 'px';
-  drawer.style.left = iconRect.left + window.scrollX + 'px';
-
   document.body.appendChild(drawer);
-
-  // Animate in
-  setTimeout(() => {
-    drawer.style.opacity = '1';
-    drawer.style.transform = 'translateY(0)';
-  }, 10);
 
   // -----------------------------
   // TITLE
@@ -110,9 +101,8 @@ export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
   iconContainer.style.gridTemplateColumns = 'repeat(auto-fit, 32px)';
   iconContainer.style.gap = '8px';
   iconContainer.style.width = '100%';
-  iconContainer.style.maxHeight = '40vh';   // scroll area height
-  iconContainer.style.overflowY = 'auto';   // only icons scroll
-  iconContainer.style.paddingRight = '6px'; // avoid scrollbar overlap
+  iconContainer.style.overflowY = 'auto';
+  iconContainer.style.paddingRight = '6px';
   drawer.appendChild(iconContainer);
 
   let selectedIcon = null;
@@ -145,7 +135,6 @@ export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
       });
       iEl.style.color = 'cyan';
       iEl.style.textShadow = '0 0 8px cyan';
-
       if (typeof onChangeCallback === 'function') {
         onChangeCallback({ icon: mainProfileIcon.innerHTML });
       }
@@ -154,36 +143,72 @@ export function showProfilePicker(mainProfileIcon, nameText, onChangeCallback) {
     iconContainer.appendChild(iEl);
   });
 
-  /* ---------------------------------------------------------
-     📌 SAFE POSITIONING — prevents touching screen edges
-  --------------------------------------------------------- */
-  function repositionDrawer() {
+  // -----------------------------
+  // POSITIONING FUNCTION
+  // -----------------------------
+  function adjustDrawerPosition() {
+    const profileRow = document.getElementById('profileRow');
+    const anchorRect = profileRow ? profileRow.getBoundingClientRect() : mainProfileIcon.getBoundingClientRect();
+
+    const spacing = 8;
     const margin = 12;
-    const rect = drawer.getBoundingClientRect();
+    const screenPadding = 25; // extra safe space to avoid touching bottom
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
 
-    let top = parseInt(drawer.style.top);
-    let left = parseInt(drawer.style.left);
+    // Temporarily reset maxHeight for measurement
+    drawer.style.maxHeight = '';
+    iconContainer.style.maxHeight = '';
 
-    // Prevent bottom overflow
-    if (rect.bottom > window.innerHeight - margin) {
-      top = window.innerHeight - rect.height - margin;
+    const drawerHeight = drawer.offsetHeight;
+    const spaceBelow = viewportHeight - anchorRect.bottom - spacing - margin - screenPadding;
+    const spaceAbove = anchorRect.top - spacing - margin;
+
+    let top;
+    if (drawerHeight <= spaceBelow) {
+      top = anchorRect.bottom + window.scrollY + spacing;
+    } else if (drawerHeight <= spaceAbove) {
+      top = anchorRect.top + window.scrollY - drawerHeight - spacing;
+    } else {
+      top = anchorRect.bottom + window.scrollY + spacing;
+      drawer.style.maxHeight = Math.max(spaceBelow, 100) + 'px';
     }
 
-    // Prevent top overflow
-    if (top < margin) top = margin;
+    // Adjust iconContainer to fill remaining space
+    const otherElementsHeight = drawer.offsetHeight - iconContainer.offsetHeight;
+    iconContainer.style.maxHeight = Math.max(drawer.offsetHeight - otherElementsHeight - 16, 50) + 'px';
 
-    // Prevent right overflow
-    if (rect.right > window.innerWidth - margin) {
-      left = window.innerWidth - rect.width - margin;
+    let left = anchorRect.left + window.scrollX;
+    if (left + drawer.offsetWidth + margin > viewportWidth) {
+      left = viewportWidth - drawer.offsetWidth - margin;
     }
-
-    // Prevent left overflow
     if (left < margin) left = margin;
 
     drawer.style.top = top + 'px';
     drawer.style.left = left + 'px';
   }
 
-  // Recalculate AFTER icons render
-  requestAnimationFrame(() => repositionDrawer());
+  // -----------------------------
+  // INITIAL ANIMATE + POSITION
+  // -----------------------------
+  requestAnimationFrame(() => {
+    adjustDrawerPosition();
+    drawer.style.opacity = '1';
+    drawer.style.transform = 'translateY(0)';
+  });
+
+  // -----------------------------
+  // LISTEN TO RESIZE & SCROLL
+  // -----------------------------
+  const repositionHandler = () => adjustDrawerPosition();
+  window.addEventListener('resize', repositionHandler);
+  window.addEventListener('scroll', repositionHandler);
+
+  // -----------------------------
+  // CLEANUP
+  // -----------------------------
+  drawer.cleanup = () => {
+    window.removeEventListener('resize', repositionHandler);
+    window.removeEventListener('scroll', repositionHandler);
+  };
 }
