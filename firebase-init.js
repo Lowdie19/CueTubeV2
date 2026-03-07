@@ -115,10 +115,20 @@ export async function logoutUser() {
 // ------------------------------------------------------
 export async function saveSongToBoth(username, title, url) {
   const songData = { title, url, addedAt: serverTimestamp() };
-  await updateDoc(userDoc(username), {
-    songbook: arrayUnion(songData),
-    queue: arrayUnion(songData)
+
+  // save to global account
+  await updateDoc(userDoc("global_songbook"), {
+    songbook: arrayUnion(songData)
   });
+
+  // if user logged in also save to their account
+  if (username) {
+    await updateDoc(userDoc(username), {
+      songbook: arrayUnion(songData),
+      queue: arrayUnion(songData)
+    });
+  }
+
   return true;
 }
 
@@ -132,6 +142,22 @@ export function saveQueue(username, data) {
 
 export function saveProfile(username, profile) {
   return setDoc(userDoc(username), { profile }, { merge: true });
+}
+
+
+export async function ensureGlobalAccount() {
+  const ref = userDoc("global_songbook");
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      username: "global_songbook",
+      profile: { name: "Global Songbook" },
+      songbook: [],
+      queue: [],
+      createdAt: serverTimestamp()
+    });
+  }
 }
 
 
