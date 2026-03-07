@@ -53,6 +53,17 @@ export function renderSongbook(filtered = null) {
       songbookListDiv.appendChild(noteDiv);
       return;
     }
+    
+    if (!isUserLoggedIn() && songbook.length === 0) {
+      const noteDiv = document.createElement("div");
+      noteDiv.style.padding = "15px";
+      noteDiv.style.color = "white";
+      noteDiv.style.fontSize = "14px";
+      noteDiv.style.lineHeight = "1.5";
+      noteDiv.innerHTML = `<span style="font-size:16px; color: gray;">No songs in the community songbook yet. Be the first to add one!</span>`;
+      songbookListDiv.appendChild(noteDiv);
+      return;
+    }
 
     if (!isUserLoggedIn()) {
       noteDiv.innerHTML = `<b style="font-size:16px; color:#ff00ff;">Login</b> / <b style="font-size:16px; color:#ff00ff;">Register</b><br>first to add music to your songbook.`;
@@ -251,19 +262,22 @@ function generateUniqueSongNumber() {
 export async function addSongToSongbook(song) {
   if (!song || !song.title || !song.id) return;
 
-  // Assign unique songNumber
-  if (!song.songNumber) {
-    song.songNumber = generateUniqueSongNumber();
-  }
+  if (!song.songNumber) song.songNumber = generateUniqueSongNumber();
 
-  // Avoid duplicates by video ID
   if (songbook.some(s => s.id === song.id)) return;
-
   songbook.push(song);
 
   if (isUserLoggedIn()) {
     const user = getCurrentUser();
+    // Save to personal account
     await saveSongbook(user.username, songbook);
+  }
+
+  // Save/update to global account for everyone
+  const globalData = await loadSongbook("global_songbook") || [];
+  if (!globalData.some(s => s.id === song.id)) {
+    globalData.push(song);
+    await saveSongbook("global_songbook", globalData);
   }
 
   renderSongbook();
@@ -277,38 +291,45 @@ searchInput.addEventListener("input", () => {
 });
 
 // ------------------------------
-// LOAD SONGBOOK FROM FIRESTORE
+// LOAD SONGBOOK FROM FIRESTORE (updated)
 export async function loadUserSongbook() {
-  if (!isUserLoggedIn()) {
-    songbook.length = 0;
+  songbook.length = 0;
+
+  if (isUserLoggedIn()) {
+    const user = getCurrentUser();
+    if (!user || !user.username) return;
+
+    const data = await loadSongbook(user.username);
+    if (Array.isArray(data)) {
+      data.forEach(song => {
+        if (!songbook.some(s => s.id === song.id)) {
+          if (!song.songNumber) song.songNumber = generateUniqueSongNumber();
+          songbook.push(song);
+        }
+      });
+    }
+
+    // Save updated songNumbers
+    await saveSongbook(user.username, songbook);
+
+    // If empty, keep Quick Guide
     renderSongbook();
     return;
   }
 
-  const user = getCurrentUser();
-  if (!user || !user.username) return;
-
-  const data = await loadSongbook(user.username);
-  songbook.length = 0;
-
-  if (Array.isArray(data)) {
-    data.forEach(song => {
-      // Only add if not already in songbook
+  // ------------------------------
+  // Non-logged-in users: load global songbook
+  const globalData = await loadSongbook("global_songbook"); // your global account
+  if (Array.isArray(globalData)) {
+    globalData.forEach(song => {
       if (!songbook.some(s => s.id === song.id)) {
-        // Assign unique songNumber if missing
-        if (!song.songNumber) {
-          song.songNumber = generateUniqueSongNumber();
-        }
+        if (!song.songNumber) song.songNumber = generateUniqueSongNumber();
         songbook.push(song);
       }
     });
   }
 
-  // Save back updated songNumbers to Firestore
-  if (isUserLoggedIn()) {
-    await saveSongbook(user.username, songbook);
-  }
-
+  // If global songbook is empty, show a friendly note
   renderSongbook();
 }
 
