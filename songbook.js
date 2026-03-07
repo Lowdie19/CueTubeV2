@@ -295,33 +295,20 @@ searchInput.addEventListener("input", () => {
 export async function loadUserSongbook() {
   songbook.length = 0;
 
+  let data = [];
+
   if (isUserLoggedIn()) {
     const user = getCurrentUser();
     if (!user || !user.username) return;
 
-    const data = await loadSongbook(user.username);
-    if (Array.isArray(data)) {
-      data.forEach(song => {
-        if (!songbook.some(s => s.id === song.id)) {
-          if (!song.songNumber) song.songNumber = generateUniqueSongNumber();
-          songbook.push(song);
-        }
-      });
-    }
-
-    // Save updated songNumbers
-    await saveSongbook(user.username, songbook);
-
-    // If empty, keep Quick Guide
-    renderSongbook();
-    return;
+    data = await loadSongbook(user.username) || [];
+  } else {
+    // Non-logged-in users: load global songbook
+    data = await loadSongbook("global_songbook") || [];
   }
 
-  // ------------------------------
-  // Non-logged-in users: load global songbook
-  const globalData = await loadSongbook("global_songbook"); // your global account
-  if (Array.isArray(globalData)) {
-    globalData.forEach(song => {
+  if (Array.isArray(data)) {
+    data.forEach(song => {
       if (!songbook.some(s => s.id === song.id)) {
         if (!song.songNumber) song.songNumber = generateUniqueSongNumber();
         songbook.push(song);
@@ -329,7 +316,16 @@ export async function loadUserSongbook() {
     });
   }
 
-  // If global songbook is empty, show a friendly note
+  // ------------------------------
+  // Sort alphabetically by title
+  songbook.sort((a, b) => {
+    if (!a.title) return 1;
+    if (!b.title) return -1;
+    return a.title.toLowerCase().localeCompare(b.title.toLowerCase());
+  });
+
+  // ------------------------------
+  // Render songbook (Quick Guide logic still works)
   renderSongbook();
 }
 
