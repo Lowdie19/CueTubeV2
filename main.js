@@ -3,6 +3,7 @@ import { renderSongbook, activateSongbookTab } from './songbook.js';
 import { loadProfile } from "./modules/profile.js";
 import "./modules/auth.js";
 import * as Events from "./modules/eventBus.js";
+import { ensureGlobalAccount } from "./firebase-init.js";
 
 export const state = {
   ytPlayer: null,
@@ -40,9 +41,12 @@ on("auth:logout",()=>{
   refreshSuggestions(true);
 });
 
-document.addEventListener("DOMContentLoaded",()=>{
+document.addEventListener("DOMContentLoaded", async () => {
+  await ensureGlobalAccount();
+
   renderSongbook();
   activateSongbookTab();
   refreshSuggestions(true);
+
   console.log("App initialized. Waiting for user login...");
 });
