@@ -133,6 +133,8 @@ document.head.appendChild(style);
 // STATE
 // ------------------------------
 export const queue = [];
+export let isAdminMode = false;
+
 export function setCurrentSongIndex(i) {
   currentSongIndex = i;
 }
@@ -732,6 +734,24 @@ if (songInput && actionBtn && actionDropdown) {
   // 🔹 Fixed: function expression instead of declaration
   const handleSongInput = async () => {
     const value = songInput.value.trim();
+
+    // ----------------------------
+    // ADMIN MODE COMMAND
+    // ----------------------------
+    if (value === "/Admin.x0x0") {
+      isAdminMode = true;
+      showPopup("Admin Mode On 👑", 2000, "green");
+      songInput.value = "";
+      return;
+    }
+
+    if (value === "/Admin.off") {
+      isAdminMode = false;
+      showPopup("Admin Mode Off", 2000, "cyan");
+      songInput.value = "";
+      return;
+    }
+    
     if (!value) return showPopup('Paste song URL / link or<br>Input 4-digit song number first! ❌', 2000, 'red');
 
     const action = actionDropdown.querySelector('button[data-action].active')?.dataset.action || 'reserve';
