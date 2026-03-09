@@ -751,6 +751,55 @@ if (songInput && actionBtn && actionDropdown) {
       songInput.value = "";
       return;
     }
+    // ""/Import (URL/link)" COMMAND on ADMIN MODE
+    //    note: When inputting links, add a space between each URL/link
+    if (value.trim().toLowerCase().startsWith("/import")) {
+
+      if (!isAdminMode) {
+        showPopup("Admin required for import ❌", 2000, "red");
+        songInput.value = "";
+        return;
+      }
+
+      // Remove the command text and grab the rest
+      const rest = value.replace(/^\/import\s*/i, "");
+
+      // Split by spaces or newlines
+      const links = rest.split(/\s+/)
+        .map(l => l.trim())
+        .filter(l => /(youtube\.com|youtu\.be)/i.test(l));
+
+      if (links.length === 0) {
+        showPopup("No YouTube links found ❌", 2000, "red");
+        songInput.value = "";
+        return;
+      }
+
+      const { addSongToSongbook } = await import('./songbook.js');
+
+      let added = 0;
+
+      for (const link of links) {
+        const id = extractVideoID(link);
+        if (!id) continue;
+
+        const title = await fetchYouTubeTitle(id);
+
+        await addSongToSongbook({
+          id,
+          title,
+          url: link
+        });
+
+        added++;
+      }
+
+      refreshSuggestions();
+
+      showPopup(`Imported ${added} songs! ✅`, 3000, "green");
+      songInput.value = "";
+      return;
+    }
     
     if (!value) return showPopup('Paste song URL / link or<br>Input 4-digit song number first! ❌', 2000, 'red');
 
