@@ -1,6 +1,6 @@
 // songbook.js
 import { showPopup } from "./ui/ui-popups.js";
-import { addToQueue } from "./queue.js";
+import { addToQueue, isAdminMode } from "./queue.js";
 import { refreshSuggestions } from "./floating-suggestions.js";
 import { isUserLoggedIn, getCurrentUser, onAuthChange } from "./auth.js";
 import { loadSongbook, saveSongbook } from "./firebase-init.js";
@@ -164,6 +164,12 @@ validSongs.forEach((song, index) => {
   trashIcon.addEventListener("click", (e) => {
     e.stopPropagation();
     playSound("clickA");
+    
+    // Block deletion of global songbook unless admin
+    if (!isAdminMode && !isUserLoggedIn()) {
+      showPopup("Community songs cannot be deleted ❌", 2000, "red");
+      return;
+    }
 
     askConfirm({
       title: "Delete from Songbook",
@@ -174,22 +180,25 @@ validSongs.forEach((song, index) => {
       `,
       theme: "cyan",
 
-      onYes: async () => {
-        // 🌟 SAME TECHNIQUE AS QUEUE.JS
-        requestAnimationFrame(() => div.classList.add("delete-anim"));
-        playSound("trash");
-        
-        // Wait for animation to finish
-        setTimeout(async () => {
-          songbook.splice(index, 1);
+    onYes: async () => {
+      requestAnimationFrame(() => div.classList.add("delete-anim"));
+      playSound("trash");
 
-          if (isUserLoggedIn()) {
-            const user = getCurrentUser();
-            await saveSongbook(user.username, songbook);
-          }
+      setTimeout(async () => {
+        songbook.splice(index, 1);
 
-          renderSongbook();
-        }, 320);
+        if (isAdminMode) {
+          // Admin deletes from global songbook
+          await saveSongbook("global_songbook", songbook);
+
+        } else if (isUserLoggedIn()) {
+          // Normal user deletes from their personal songbook
+          const user = getCurrentUser();
+          await saveSongbook(user.username, songbook);
+        }
+
+        renderSongbook();
+      }, 320);
       }
     });
   });
