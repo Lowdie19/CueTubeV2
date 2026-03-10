@@ -11,7 +11,20 @@ const tabQueue = document.getElementById("tabQueue");
 const songbookListDiv = document.getElementById("songbookList");
 const searchInput = document.getElementById("songbookSearch");
 
+// DELETE SELECTED BUTTON
+const deleteSelectedBtn = document.createElement("button");
+deleteSelectedBtn.textContent = "Delete Selected (0)";
+deleteSelectedBtn.style.display = "none";
+// Move button to bottom of left drawer instead of drawerTabsHeader
+const leftDrawer = document.getElementById("leftDrawer"); // <-- adjust ID
+leftDrawer.appendChild(deleteSelectedBtn);
+
 export const songbook = [];
+
+// MULTI SELECT MODE
+let selectionMode = false;
+let holdTimer = null;
+const selectedSongs = new Set();
 
 // ------------------------------
 // CSS for spinner + icon
@@ -102,7 +115,55 @@ let activeTrashItem = null; // keep track of which song is showing trash
 
 validSongs.forEach((song, index) => {
   const div = document.createElement("div");
+
+    // LONG PRESS (2 seconds) to activate selection mode
+    div.addEventListener("pointerdown", () => {
+
+      if (selectionMode) return;
+
+      holdTimer = setTimeout(() => {
+        enterSelectionMode();
+      }, 1500);
+
+    });
+
+    div.addEventListener("pointerup", () => {
+      clearTimeout(holdTimer);
+    });
+
+    div.addEventListener("pointerleave", () => {
+      clearTimeout(holdTimer);
+    });
+
+    div.addEventListener("click", () => {
+
+      if(!selectionMode) return;
+
+      const checkbox = div.querySelector(".song-select");
+      if(!checkbox) return;
+
+      checkbox.checked = !checkbox.checked;
+
+      if(checkbox.checked){
+          selectedSongs.add(index);
+      }else{
+          selectedSongs.delete(index);
+      }
+
+      deleteSelectedBtn.textContent =
+          "Delete Selected (" + selectedSongs.size + ")";
+    });
+
   div.classList.add("songItem");
+
+    if(selectionMode){
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "song-select";
+      checkbox.style.marginRight = "10px";
+      div.prepend(checkbox);
+    }
+
   div.dataset.index = index;
   div.style.display = "flex";
   div.style.alignItems = "center";
@@ -337,6 +398,100 @@ export async function loadUserSongbook() {
   // Render songbook (Quick Guide logic still works)
   renderSongbook();
 }
+
+
+// ------------------------------
+// DELETE SELECTION MODE
+function enterSelectionMode(){
+
+  if(selectionMode) return;
+
+  selectionMode = true;
+  selectedSongs.clear();
+
+  deleteSelectedBtn.style.display = "block";
+
+  renderSongbook();
+
+}
+
+deleteSelectedBtn.addEventListener("click", async () => {
+
+  // Block non-admin from deleting community songs
+  if (!isAdminMode && !isUserLoggedIn()) {
+    showPopup("Community songs cannot be deleted ❌", 2000, "red");
+    return;
+  }
+
+  // If no songs selected, show error
+  if (selectedSongs.size === 0) {
+    showPopup("No songs selected ❌", 2000, "red");
+    return;
+  }
+
+  // AskConfirm with actual number of selected songs
+  askConfirm({
+    title: "Delete Selected Songs",
+    message: `
+      Are you sure you want to delete<br>
+      <span style="color: cyan;">${selectedSongs.size} selected song${selectedSongs.size > 1 ? "s" : ""}</span><br>
+      from your songbook?
+    `,
+    theme: "cyan",
+    onYes: async () => {
+
+      // Perform the deletion
+      const indexes = Array.from(selectedSongs).sort((a, b) => b - a);
+      for (const i of indexes) {
+        songbook.splice(i, 1);
+      }
+      selectedSongs.clear();
+
+      // Save updated list
+      if (isAdminMode) {
+        await saveSongbook("global_songbook", songbook);
+      } else if (isUserLoggedIn()) {
+        const user = getCurrentUser();
+        await saveSongbook(user.username, songbook);
+      }
+
+      selectionMode = false;
+      deleteSelectedBtn.style.display = "none";
+      deleteSelectedBtn.textContent = "Delete Selected (0)";
+
+      showPopup(
+        `Deleted ${indexes.length} song${indexes.length > 1 ? "s" : ""}!`,
+        2500,
+        "cyan"
+      );
+
+      renderSongbook();
+    }
+  });
+
+});
+
+// ------------------------------
+// Cancel selection when clicking outside
+document.addEventListener("click", (event) => {
+
+  if (!selectionMode) return; // if not in select mode, do nothing
+
+  // If click happens inside the songbook list or the delete button, do nothing
+  if (songbookListDiv.contains(event.target) ||
+      deleteSelectedBtn.contains(event.target)) {
+    return;
+  }
+
+  // Otherwise cancel selection mode
+  selectionMode = false;
+  selectedSongs.clear();
+  deleteSelectedBtn.style.display = "none";
+  deleteSelectedBtn.textContent = "Delete Selected (0)";
+
+  renderSongbook(); // re-render list without checkboxes
+});
+
 
 // ------------------------------
 // AUTH CHANGE LISTENER
