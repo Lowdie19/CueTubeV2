@@ -40,6 +40,18 @@
         font-family: "Arial Narrow", Arial, sans-serif; /* condensed font */
       }
 
+      #topbar {
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        transform-origin: top;
+        z-index: 1002;
+      }
+
+      #topbar.hidden {
+        transform: translateY(-100%);
+        opacity: 0;
+        pointer-events: none;
+      }
+
       /* Hamburger */
       #hamburger {
         position: fixed;
@@ -871,44 +883,28 @@
 
       <!-- Tab Buttons -->
       <div id="drawerTabsHeader">
-        <div id="tabSongbook" class="drawerTab magenta active" >Songbook</div>
-        <div id="tabQueue" class="drawerTab cyan inactive" >Queue</div>
+        <div id="tabSongbook" class="drawerTab magenta active">Songbook</div>
+        <div id="tabQueue" class="drawerTab cyan inactive">Queue</div>
       </div>
 
+      <!-- Search Bar (below tabs) -->
+      <section style="display: flex; gap: 8px; align-items: center; padding: 10px;">
+        <input
+          type="text"
+          id="songbookSearch"
+          data-theme="magenta"
+          data-icon="search"
+          placeholder="Search songs..."
+        />
+      </section>
+
       <!-- Tab Contents -->
-      <div id="drawerTabs" style="flex: 1; overflow-y: auto; color: white">
-        <!-- Search Bar (only for Songbook) -->
-        <section style="display: flex; gap: align-items: center; margin: 10px 10px 0px 10px;">
-          <input
-            type="text"
-            id="songbookSearch"
-            data-theme="magenta"
-            data-icon="search"
-            placeholder="Search songs..." />
-        </section>
-        <!-- Songbook List -->
-        <div id="songbookList" style="display: flex; flex-direction: column; gap: 5px; padding: 10px">
-          <!-- Songs will be injected here from JS -->
+      <div id="drawerTabs" style="flex: 1; overflow-y: auto; color: white;">
+        <div id="songbookList" style="display: flex; flex-direction: column; gap: 5px; padding: 10px;">
+          <!-- Songs injected via JS -->
         </div>
 
-        <!-- UP NEXT Title Holder -->
-        <div
-          id="upNextBox"
-          style="
-            display: none;
-            padding: 15px;
-            margin: 0px 10px;
-            background: black;
-            border-radius: 16px 0px 16px 0px;
-            color: white;
-            font-size: 14px;
-          ">
-          <div style="font-weight: bold; color: cyan">Up Next:</div>
-          <div id="upNextTitle" style="margin-top: 10px; font-size: 16px; font-weight: bold">(None)</div>
-        </div>
-
-        <!-- Queue List -->
-        <div id="queueList" style="display: none; flex-direction: column; gap: 5px; padding: 10px"></div>
+        <div id="queueList" style="display: none; flex-direction: column; gap: 5px; padding: 10px;"></div>
       </div>
 
       <div id="dragHandle"></div>
@@ -1107,6 +1103,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     if (!drawerOpen && forceFull) {
       drawer.style.transform = `translateX(-${drawer.offsetWidth}px)`;
+      rightContent.style.top = "0";
       rightContent.style.left = "0";
       rightContent.style.width = "100%";
       
@@ -1118,6 +1115,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } else {
       drawer.style.transform = "translateX(0)";
+      rightContent.style.top = "70px"
       rightContent.style.left = drawer.offsetWidth + "px";
       rightContent.style.width = screenW - drawer.offsetWidth + "px";
       
@@ -1256,20 +1254,26 @@ setTimeout(resetBottomBar, 100); // wait for viewport to settle
   // ------------------------
   // Hamburger toggle
   // ------------------------
-  hamburger.addEventListener("click", () => {
-    drawerOpen = !drawerOpen;
+  const topbar = document.getElementById("topbar");
+  let fullScreenMode = false;
+  
+    hamburger.addEventListener("click", () => {
+      drawerOpen = !drawerOpen;
+      fullScreenMode = !drawerOpen;
 
-    // Slide/fade bottom bar instead of instant show/hide
-    if (drawerOpen) {
-      bottomBar.classList.remove("hidden");
-    } else {
-      bottomBar.classList.add("hidden");
-    }
-    
-    updateLayout(!drawerOpen);
-    centerPlayerVertically();
-    resetBottomBar();
-  });
+      // Slide/fade bottom bar instead of instant show/hide
+      if (drawerOpen) {
+        bottomBar.classList.remove("hidden");
+        topbar.classList.remove("hidden"); // show top bar
+      } else {
+        bottomBar.classList.add("hidden");
+        topbar.classList.add("hidden"); // hide top bar
+      }
+
+      updateLayout(!drawerOpen);
+      centerPlayerVertically();
+      resetBottomBar();
+    });
   
   // Window resize
   window.addEventListener("resize", () => {
