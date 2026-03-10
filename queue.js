@@ -796,7 +796,11 @@ if (songInput && actionBtn && actionDropdown) {
 
       refreshSuggestions();
 
-      showPopup(`Imported ${added} songs! ✅`, 3000, "green");
+      showPopup(
+        `Imported ${added} song${added === 1 ? "" : "s"}! ✅`,
+        3000,
+        "green"
+      );
       songInput.value = "";
       return;
     }
