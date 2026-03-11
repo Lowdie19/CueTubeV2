@@ -883,28 +883,45 @@
 
       <!-- Tab Buttons -->
       <div id="drawerTabsHeader">
-        <div id="tabSongbook" class="drawerTab magenta active">Songbook</div>
-        <div id="tabQueue" class="drawerTab cyan inactive">Queue</div>
+        <div id="tabSongbook" class="drawerTab magenta active" >Songbook</div>
+        <div id="tabQueue" class="drawerTab cyan inactive" >Queue</div>
       </div>
-
-      <!-- Search Bar (below tabs) -->
-      <section style="display: flex; gap: 8px; align-items: center; padding: 10px;">
-        <input
-          type="text"
-          id="songbookSearch"
-          data-theme="magenta"
-          data-icon="search"
-          placeholder="Search songs..."
-        />
-      </section>
+    
+            <!-- Search Bar (only for Songbook) -->
+        <section style="display: flex; margin: 0px 10px 10px 10px;">
+          <input
+            type="text"
+            id="songbookSearch"
+            data-theme="magenta"
+            data-icon="search"
+            placeholder="Search songs..." />
+        </section>
 
       <!-- Tab Contents -->
-      <div id="drawerTabs" style="flex: 1; overflow-y: auto; color: white;">
-        <div id="songbookList" style="display: flex; flex-direction: column; gap: 5px; padding: 10px;">
-          <!-- Songs injected via JS -->
+      <div id="drawerTabs" style="flex: 1; overflow-y: auto; color: white">
+        <!-- Songbook List -->
+        <div id="songbookList" style="display: flex; flex-direction: column; gap: 5px; padding: 10px">
+          <!-- Songs will be injected here from JS -->
         </div>
 
-        <div id="queueList" style="display: none; flex-direction: column; gap: 5px; padding: 10px;"></div>
+        <!-- UP NEXT Title Holder -->
+        <div
+          id="upNextBox"
+          style="
+            display: none;
+            padding: 15px;
+            margin: 0px 10px;
+            background: black;
+            border-radius: 16px 0px 16px 0px;
+            color: white;
+            font-size: 14px;
+          ">
+          <div style="font-weight: bold; color: cyan">Up Next:</div>
+          <div id="upNextTitle" style="margin-top: 10px; font-size: 16px; font-weight: bold">(None)</div>
+        </div>
+
+        <!-- Queue List -->
+        <div id="queueList" style="display: none; flex-direction: column; gap: 5px; padding: 10px"></div>
       </div>
 
       <div id="dragHandle"></div>
