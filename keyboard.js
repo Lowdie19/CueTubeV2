@@ -37,7 +37,7 @@ export function initCustomKeyboard() {
   });
   document.body.appendChild(kb);
 
-  let kbKeyActive = false; // ⬅️ Flag for key press
+  let kbKeyActive = false;
   let activeInput = null;
   let currentLayout = null;
   let isShift = false;
@@ -54,16 +54,18 @@ export function initCustomKeyboard() {
     ["Q","W","E","R","T","Y","U","I","O","P"],
     ["A","S","D","F","G","H","J","K","L","CLEAR"],
     ["SHIFT","Z","X","C","V","B","N","M","BACK"],
-    ["SPACE","ENTER"]
+    ["SWITCH",".","/","SPACE","ENTER"]
   ];
+
   const alphaLower = alphaUpper.map(row =>
-    row.map(k => ["SHIFT","BACK","SPACE","CLEAR","ENTER"].includes(k) ? k : k.toLowerCase())
+    row.map(k => ["SHIFT","BACK","SPACE","CLEAR","ENTER","SWITCH",".","/"].includes(k) ? k : k.toLowerCase())
   );
+
   const numLayout = [
     ["7","8","9","CLEAR"],
     ["4","5","6","BACK"],
     ["1","2","3","PASTE"],
-    ["0","ENTER"]
+    ["SWITCH","0","ENTER"]
   ];
 
   // ----------------------------------------------------
@@ -86,54 +88,57 @@ export function initCustomKeyboard() {
   // ----------------------------------------------------
   // BUILD KEYS
   // ----------------------------------------------------
-function buildKeyboard(layout) {
+  function buildKeyboard(layout) {
     kb.innerHTML = "";
 
-    // Reapply blur / semi-transparent base
     Object.assign(kb.style, {
-        display: "flex",
-        position: "fixed",
-        background: "rgba(30,30,30,0.25)", // semi-transparent
-        backdropFilter: "blur(12px)",      // blur behind the keyboard
-        border: "1px solid rgba(255,255,255,0.15)", // subtle border
-        borderRadius: "10px",
-        zIndex: "99999",
-        padding: "6px",
-        boxSizing: "border-box",
-        flexDirection: "column",
-        userSelect: "none",
-        touchAction: "none",
+      display: "flex",
+      position: "fixed",
+      background: "rgba(30,30,30,0.25)",
+      backdropFilter: "blur(12px)",
+      border: "1px solid rgba(255,255,255,0.15)",
+      borderRadius: "10px",
+      zIndex: "99999",
+      padding: "6px",
+      boxSizing: "border-box",
+      flexDirection: "column",
+      userSelect: "none",
+      touchAction: "none",
     });
 
     layout.forEach(rowKeys => {
-        const row = document.createElement("div");
-        Object.assign(row.style, { display: "flex", justifyContent: "center", width: "100%", marginBottom: "5px", gap: "4px" });
-        rowKeys.forEach(key => {
-            const btn = document.createElement("button");
-            btn.dataset.key = key;
-            btn.textContent =
-              key === "BACK" ? "⌫" :
-              key === "SPACE" ? "␣" :
-              key === "ENTER" ? "▶" :
-              key;
+      const row = document.createElement("div");
+      Object.assign(row.style, { display: "flex", justifyContent: "center", width: "100%", marginBottom: "5px", gap: "4px" });
 
-            Object.assign(btn.style, {
-              flex: key === "SPACE" ? "5" : "1",
-              height: "42px",
-              borderRadius: "5px",
-              border: "1px solid #555",
-              background: (key === "SHIFT" && isShift) ? "#777" : "#333",
-              color: "#fff",
-              fontSize: "16px",
-              userSelect: "none",
-              transition: "transform 0.08s ease, background 0.08s ease",
-            });
+      rowKeys.forEach(key => {
+        const btn = document.createElement("button");
+        btn.dataset.key = key;
 
-            row.appendChild(btn);
+        btn.textContent =
+          key === "BACK" ? "⌫" :
+          key === "SPACE" ? "␣" :
+          key === "ENTER" ? "▶" :
+          key === "SWITCH" ? (layout === numLayout ? "[Aa]" : "[123]") :
+          key;
+
+        Object.assign(btn.style, {
+          flex: key === "SPACE" ? "5" : "1",
+          height: "42px",
+          borderRadius: "5px",
+          border: "1px solid #555",
+          background: (key === "SHIFT" && isShift) ? "#777" : "#333",
+          color: "#fff",
+          fontSize: "16px",
+          userSelect: "none",
+          transition: "transform 0.08s ease, background 0.08s ease",
         });
-        kb.appendChild(row);
+
+        row.appendChild(btn);
+      });
+
+      kb.appendChild(row);
     });
-}
+  }
 
   // ----------------------------------------------------
   // CALCULATE BASE HEIGHT
@@ -157,7 +162,6 @@ function buildKeyboard(layout) {
 
     if (!baseHeight) {
       buildKeyboard(currentLayout);
-      kb.dataset.numeric = activeInput.type === "number" ? "1" : "0";
       baseHeight = calculateBaseHeight();
     }
 
@@ -193,9 +197,9 @@ function buildKeyboard(layout) {
     const id = input.id.toLowerCase();
     const isNumeric = input.type === "number" || id.includes("pin") || id === "songinput";
 
+    kb.dataset.numeric = isNumeric ? "1" : "0";
     currentLayout = isNumeric ? numLayout : (isShift ? alphaUpper : alphaLower);
     buildKeyboard(currentLayout);
-    kb.dataset.numeric = isNumeric ? "1" : "0";
     baseHeight = isNumeric ? 320 : null;
 
     kb.style.display = "flex";
@@ -208,7 +212,7 @@ function buildKeyboard(layout) {
   }
 
   // ----------------------------------------------------
-  // INPUT OVERRIDE (disable native keyboard)
+  // INPUT OVERRIDE
   // ----------------------------------------------------
   document.querySelectorAll("input").forEach(input => {
     input.addEventListener("pointerdown", e => {
@@ -227,15 +231,14 @@ function buildKeyboard(layout) {
     kbKeyActive = true;
 
     const key = e.target.dataset.key;
-
     const btn = e.target;
+
     btn.classList.add("pressed");
-    btn.style.borderColor = "#0ff"; // cyan flash
+    btn.style.borderColor = "#0ff";
     setTimeout(() => {
       btn.classList.remove("pressed");
-      // restore normal border
       btn.style.borderColor = (key === "SHIFT" && isShift) ? "#0ff" : "#555";
-    }, 80); // was 180 → faster, matches CSS
+    }, 80);
 
     if (key === "BACK") activeInput.value = activeInput.value.slice(0, -1);
     else if (key === "CLEAR") activeInput.value = "";
@@ -269,57 +272,52 @@ function buildKeyboard(layout) {
         activeInput = null;
       }, 1000);
     }
-    
-else if (key === "SHIFT") {
-    const now = Date.now();
-    if (now - lastShiftTime < 400) shiftLock = !shiftLock;
-    isShift = shiftLock ? true : !isShift;
-    lastShiftTime = now;
+    else if (key === "SHIFT") {
+      const now = Date.now();
+      if (now - lastShiftTime < 400) shiftLock = !shiftLock;
+      isShift = shiftLock ? true : !isShift;
+      lastShiftTime = now;
 
-    const btn = e.target;
-
-    // Animate tap (shrink + cyan border)
-    btn.classList.add("pressed");
-    btn.style.borderColor = "#0ff"; // cyan flash
-    setTimeout(() => btn.classList.remove("pressed"), 80); // faster
-
-    // Rebuild keyboard after animation
-    setTimeout(() => {
-        if (kb.dataset.numeric !== "1") {
-            currentLayout = isShift ? alphaUpper : alphaLower;
-            buildKeyboard(currentLayout);
-            updateKeyboardPosition();
-
-            // Sticky highlight for Shift
-        const newShift = kb.querySelector('button[data-key="SHIFT"]');
-        if (newShift) {
-            newShift.style.background = isShift ? "#777" : "#333";
-            newShift.style.borderColor = isShift ? "#0ff" : "#555"; // <-- persistent cyan when active
-        }
-        }
-    }, 200); // slightly longer than pressed animation
-}
-    
-    else if (key === "PASTE") {
-      const btn = e.target;
       btn.classList.add("pressed");
-      setTimeout(() => btn.classList.remove("pressed"), 180);
+      btn.style.borderColor = "#0ff";
+      setTimeout(() => btn.classList.remove("pressed"), 80);
 
-      try {
-        const txt = await navigator.clipboard.readText();
-        if (txt) activeInput.value += txt;
-      } catch(err) { console.error(err); }
+      setTimeout(() => {
+        if (kb.dataset.numeric !== "1") {
+          currentLayout = isShift ? alphaUpper : alphaLower;
+          buildKeyboard(currentLayout);
+          updateKeyboardPosition();
 
+          const newShift = kb.querySelector('button[data-key="SHIFT"]');
+          if (newShift) {
+            newShift.style.background = isShift ? "#777" : "#333";
+            newShift.style.borderColor = isShift ? "#0ff" : "#555";
+          }
+        }
+      }, 200);
+    }
+    else if (key === "PASTE") {
+      const txt = await navigator.clipboard.readText().catch(() => "");
+      if (txt) activeInput.value += txt;
       activeInput.dispatchEvent(new Event("input", { bubbles: true }));
       centerCaret(activeInput);
       return;
     }
-    else {
-      // Regular character key
-      activeInput.value += key;
+    else if (key === "SWITCH") {
+      isShift = false;
+      shiftLock = false;
 
-      // Reset temporary Shift only for normal letters, not numbers or special keys
-      const specialKeys = ["BACK", "CLEAR", "SPACE", "ENTER", "PASTE"];
+      const switchingToNumeric = currentLayout !== numLayout;
+      currentLayout = switchingToNumeric ? numLayout : alphaLower;
+      kb.dataset.numeric = switchingToNumeric ? "1" : "0";
+
+      buildKeyboard(currentLayout);
+      updateKeyboardPosition();
+      return;
+    }
+    else {
+      activeInput.value += key;
+      const specialKeys = ["BACK","CLEAR","SPACE","ENTER","PASTE"];
       if (!shiftLock && kb.dataset.numeric !== "1" && isShift && !specialKeys.includes(key)) {
         isShift = false;
         currentLayout = alphaLower;
@@ -341,7 +339,7 @@ else if (key === "SHIFT") {
     const isEye = [...eyeIcons].includes(e.target);
 
     if (insideInput || isEye || kbKeyActive) {
-      kbKeyActive = false; // reset flag
+      kbKeyActive = false;
       return;
     }
 
