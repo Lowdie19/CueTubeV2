@@ -13,12 +13,27 @@ const searchInput = document.getElementById("songbookSearch");
 
 // DELETE SELECTED BUTTON
 const deleteSelectedBtn = document.createElement("button");
-deleteSelectedBtn.textContent = "Delete Selected (0)";
+deleteSelectedBtn.setAttribute("data-theme", "red"); // <-- use red theme
+deleteSelectedBtn.classList.add("full-width");       // optional: full-width button
+deleteSelectedBtn.style.margin = "10px auto 15px auto";
+deleteSelectedBtn.style.maxWidth = "250px";
 deleteSelectedBtn.style.display = "none";
-// Move button to bottom of left drawer instead of drawerTabsHeader
-const leftDrawer = document.getElementById("leftDrawer"); // <-- adjust ID
-leftDrawer.appendChild(deleteSelectedBtn);
 
+// Add icon with spacing
+const trashIcon = document.createElement("i");
+trashIcon.className = "fa-solid fa-trash-can";
+trashIcon.style.marginRight = "6px"; // space between icon and text
+
+// Add text
+const btnText = document.createTextNode("Delete Selected (0)");
+
+// Append icon and text
+deleteSelectedBtn.appendChild(trashIcon);
+deleteSelectedBtn.appendChild(btnText);
+
+// Append button to drawer
+const leftDrawer = document.getElementById("leftDrawer");
+leftDrawer.appendChild(deleteSelectedBtn);
 export const songbook = [];
 
 // MULTI SELECT MODE
