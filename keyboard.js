@@ -205,10 +205,12 @@ export function initCustomKeyboard() {
     kb.style.display = "flex";
     updateKeyboardPosition();
 
+    activeInput.focus();
     const len = activeInput.value.length;
     activeInput.setSelectionRange(len, len);
-    activeInput.focus();
     centerCaret(activeInput);
+    
+    activeInput.style.caretColor = "auto";
   }
 
   // ----------------------------------------------------
@@ -283,17 +285,25 @@ export function initCustomKeyboard() {
       setTimeout(() => btn.classList.remove("pressed"), 80);
 
       setTimeout(() => {
-        if (kb.dataset.numeric !== "1") {
-          currentLayout = isShift ? alphaUpper : alphaLower;
-          buildKeyboard(currentLayout);
-          updateKeyboardPosition();
+          if (kb.dataset.numeric !== "1") {
+              currentLayout = isShift ? alphaUpper : alphaLower;
+              buildKeyboard(currentLayout);
+              updateKeyboardPosition();
 
-          const newShift = kb.querySelector('button[data-key="SHIFT"]');
-          if (newShift) {
-            newShift.style.background = isShift ? "#777" : "#333";
-            newShift.style.borderColor = isShift ? "#0ff" : "#555";
+              const newShift = kb.querySelector('button[data-key="SHIFT"]');
+              if (newShift) {
+                  newShift.style.background = isShift ? "#777" : "#333";
+                  newShift.style.borderColor = isShift ? "#0ff" : "#555";
+              }
+
+              // ✅ Keep caret visible after rebuild
+              if (activeInput) {
+                  activeInput.focus();
+                  const len = activeInput.value.length;
+                  activeInput.setSelectionRange(len, len);
+                  centerCaret(activeInput);
+              }
           }
-        }
       }, 200);
     }
     else if (key === "PASTE") {
@@ -313,6 +323,15 @@ export function initCustomKeyboard() {
 
       buildKeyboard(currentLayout);
       updateKeyboardPosition();
+
+      // ✅ Keep caret visible after rebuild
+      if (activeInput) {
+          activeInput.focus();
+          const len = activeInput.value.length;
+          activeInput.setSelectionRange(len, len);
+          centerCaret(activeInput);
+      }
+
       return;
     }
     else {
@@ -326,8 +345,14 @@ export function initCustomKeyboard() {
       }
     }
 
-    activeInput.dispatchEvent(new Event("input", { bubbles: true }));
-    centerCaret(activeInput);
+      activeInput.dispatchEvent(new Event("input", { bubbles: true }));
+      // Keep caret visible at all times
+      if (activeInput) {
+          const len = activeInput.value.length;
+          activeInput.focus();
+          activeInput.setSelectionRange(len, len);
+          centerCaret(activeInput);
+      }
   });
 
   // ----------------------------------------------------
