@@ -56,10 +56,10 @@ const btnCSS = `
 }
 @keyframes ripple-effect { to { transform: scale(4); opacity: 0; } }
 
-/* Text glow on hover */
+/* Text glow on hover 
 .ui-btn:hover:not(.btnX) {
   text-shadow: 0 0 8px currentColor, 0 0 14px currentColor;
-}
+}*/
 
 /* Width helpers */
 .ui-btn.fixed-width { min-width: 120px; max-width: 240px; }
