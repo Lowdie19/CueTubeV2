@@ -12,7 +12,7 @@ const inputCSS_C = `
   font-size: 16px;
   border-radius: 12px;
   border: 2px solid rgba(255,255,255,0.25);
-  background: rgba(0,0,0,0.35);
+  background: #ffffff0D; /* was rgba(0,0,0,0.35) */
   backdrop-filter: blur(6px);
   color: white;
   outline: none;
@@ -31,14 +31,14 @@ const inputCSS_C = `
 .ui-input:focus {
   border-color: var(--theme-color);
   box-shadow: 0 0 18px var(--theme-color), inset 0 0 10px rgba(var(--rgb-theme), 0.7);
-  background: rgba(0,0,0,0.45);
+  background: #ffffff0D; /* was rgba(0,0,0,0.45) */
   color: var(--theme-color);
 }
 
 .ui-input:-webkit-autofill {
   -webkit-text-fill-color: var(--theme-color) !important;
   color: var(--theme-color) !important;
-  background-color: rgba(0,0,0,0.35) !important;
+  background-color: #ffffff0D !important; /* was rgba(0,0,0,0.35) */
   caret-color: var(--theme-color);
   transition: color 5000s ease-in-out 0s, background-color 5000s ease-in-out 0s;
 }
