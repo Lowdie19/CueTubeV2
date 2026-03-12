@@ -695,6 +695,50 @@
           display: none !important;
       }
 
+
+    /* floating Remote Button */ 
+    #floatingRemoteBtn {
+      position: absolute; /* inside rightContent */
+      top: 30px;
+      right: 30px;
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background-color: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      border: 2px solid gray;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 99999;
+      
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1s, easetransform 0.2s, box-shadow 0.2s, border 0.2s, color 0.2s;
+    }
+   #floatingRemoteBtn:hover {
+     color: cyan;
+     border: 2px solid cyan;
+     box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 15px rgba(0, 255, 255, 0.9);
+      }
+     
+    #floatingRemoteBtn:active {
+      transform: scale(0.85);
+      transition: transform 0.15s ease; /* quick shrink on press */
+    }
+
+    #floatingRemoteBtn.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #floatingRemoteBtn.hide {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(60px) translateY(-10px); /* push it outside rightContent */
+    }
 </style>
   
   
@@ -791,15 +835,22 @@
         Please rotate your device to <b>LANDSCAPE</b> to use CueTube.
       </div>
     </div>
-    
+
     <div id="dragOverlay"></div>
 
     <div id="hamburger" title="Menu" data-sound="clickD">&#9776;</div>
     
-    <div id="topbar">
-      <img src="assets/images/icon.png" alt="CueTube Logo" id="topbarLogo">
-      <div class="title">CueTube</div>
-    </div>
+  <div id="topbar">
+    <img src="assets/images/icon.png"
+         alt="CueTube Logo"
+         id="topbarLogo"
+         style="
+           filter:
+             drop-shadow(0 0px 5px rgba(128, 128, 128, 0.26))
+             drop-shadow(0 0 3px rgba(0, 255, 255, 0.2));
+         ">
+    <div class="title">CueTube</div>
+  </div>
 
     <!-- Left Drawer -->
   <div id="leftDrawer">
@@ -936,6 +987,12 @@
 
     <!-- Right Content -->
     <div id="rightContent">
+      
+      <!-- Remote Button -->
+      <div id="floatingRemoteBtn" title="Remote Control Mode">
+        <i class="fa-solid fa-grip"></i>
+      </div>
+      
       <div id="notif-container"></div>
       <div id="playerWrapper">
         <div id="ytPlayer"></div>
@@ -1460,45 +1517,88 @@ function centerPlayerVertically() {
 
 
 <script>
-      const tabSongbook = document.getElementById("tabSongbook");
-      const tabQueue = document.getElementById("tabQueue");
-  
-      // Correct panels
-      const panelSongbook = document.getElementById("songbookList");
-      const panelQueue = document.getElementById("queueList");
-      const searchBar = document.getElementById("songbookSearch");
-      const upNext = document.getElementById("upNextBox");
-   
-      tabSongbook.addEventListener("click", () => {
-        // button visuals
-        tabSongbook.classList.add("active");
-        tabSongbook.classList.remove("inactive");
-        tabQueue.classList.remove("active");
-        tabQueue.classList.add("inactive");
-        
-        // correct panels
-        panelSongbook.style.display = "flex";
-        panelQueue.style.display = "none";
-        
-        // show songbook-only UI
-        searchBar.style.display = "block";
-        upNext.style.display = "none";
-      });
-   
-      tabQueue.addEventListener("click", () => {
-        tabQueue.classList.add("active");
-        tabQueue.classList.remove("inactive");
-        
-        tabSongbook.classList.remove("active");
-        tabSongbook.classList.add("inactive");
-        
-        panelSongbook.style.display = "none";
-        panelQueue.style.display = "flex";
-        
-        // hide songbook-only UI
-        searchBar.style.display = "none";
-        upNext.style.display = "block";
-      });
+    const tabSongbook = document.getElementById("tabSongbook");
+    const tabQueue = document.getElementById("tabQueue");
+
+    // Correct panels
+    const panelSongbook = document.getElementById("songbookList");
+    const panelQueue = document.getElementById("queueList");
+    const searchBar = document.getElementById("songbookSearch");
+    const upNext = document.getElementById("upNextBox");
+
+    tabSongbook.addEventListener("click", () => {
+      // button visuals
+      tabSongbook.classList.add("active");
+      tabSongbook.classList.remove("inactive");
+      tabQueue.classList.remove("active");
+      tabQueue.classList.add("inactive");
+
+      // correct panels
+      panelSongbook.style.display = "flex";
+      panelQueue.style.display = "none";
+
+      // show songbook-only UI
+      searchBar.style.display = "block";
+      upNext.style.display = "none";
+    });
+
+    tabQueue.addEventListener("click", () => {
+      tabQueue.classList.add("active");
+      tabQueue.classList.remove("inactive");
+
+      tabSongbook.classList.remove("active");
+      tabSongbook.classList.add("inactive");
+
+      panelSongbook.style.display = "none";
+      panelQueue.style.display = "flex";
+
+      // hide songbook-only UI
+      searchBar.style.display = "none";
+      upNext.style.display = "block";
+    });
+</script>
+
+<!-- Remote Button -->
+<script>
+  const remoteBtn = document.getElementById("floatingRemoteBtn");
+  let fadeInTimeout = null;
+
+  function toggleRemoteBtn() {
+    if (drawerOpen) {
+      // Clear any previous timer
+      if (fadeInTimeout) clearTimeout(fadeInTimeout);
+
+      // Fade in after 2 seconds
+      fadeInTimeout = setTimeout(() => {
+        remoteBtn.style.transition = "opacity 1s ease"; // ensure fade-in works
+        remoteBtn.classList.add("show");
+      }, 1000);
+
+    } else {
+      // Hide immediately without animation
+      if (fadeInTimeout) {
+        clearTimeout(fadeInTimeout);
+        fadeInTimeout = null;
+      }
+
+      remoteBtn.style.transition = "none"; // remove fade
+      remoteBtn.classList.remove("show");
+
+      // Force reflow to apply instantly
+      void remoteBtn.offsetHeight;
+
+      // Restore transition for next show
+      remoteBtn.style.transition = "opacity 1s ease";
+    }
+  }
+
+  // Initial toggle
+  window.addEventListener("DOMContentLoaded", toggleRemoteBtn);
+
+  // Drawer toggle
+  hamburger.addEventListener("click", () => {
+    toggleRemoteBtn();
+  });
 </script>
 
 
