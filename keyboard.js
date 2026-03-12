@@ -356,21 +356,38 @@ export function initCustomKeyboard() {
   });
 
   // ----------------------------------------------------
-  // CLICK OUTSIDE CLOSES KEYBOARD
+  // CLICK OUTSIDE CLOSES KEYBOARD + DROPDOWN HANDLING
   // ----------------------------------------------------
   document.addEventListener("pointerdown", e => {
-    if (kb.contains(e.target)) return;
-    const insideInput = [...document.querySelectorAll("input")].some(i => i.contains(e.target));
-    const isEye = [...eyeIcons].includes(e.target);
+    if (!kb) return;
 
-    if (insideInput || isEye || kbKeyActive) {
-      kbKeyActive = false;
-      return;
+    const actionBtn = document.getElementById("actionBtn");
+    const actionDropdown = document.getElementById("actionDropdown");
+    const nextSongBtn = document.getElementById("nextSongBtn");
+    const nextDropdown = document.getElementById("nextConfirmDropup");
+
+    const clickedInsideKeyboard = kb.contains(e.target);
+    const clickedInsideInput = [...document.querySelectorAll("input")].some(i => i.contains(e.target));
+    const isEye = [...eyeIcons].includes(e.target);
+    const isActionButton = actionBtn && actionBtn.contains(e.target);
+    const isActionDropdownItem = actionDropdown && actionDropdown.contains(e.target);
+    const isNextButton = nextSongBtn && nextSongBtn.contains(e.target);
+    const isNextDropdownItem = nextDropdown && nextDropdown.contains(e.target);
+
+    // 🔹 Only hide keyboard if clicked outside everything
+    if (!clickedInsideKeyboard && !clickedInsideInput && !isEye) {
+      kb.style.display = "none";
+      isShift = false;
+      shiftLock = false;
+      activeInput = null;
     }
 
-    kb.style.display = "none";
-    isShift = false;
-    shiftLock = false;
-    activeInput = null;
+    // 🔹 Hide dropdowns if clicked outside their buttons
+    if (!isActionButton && !isActionDropdownItem && actionDropdown) {
+      actionDropdown.style.display = "none";
+    }
+    if (!isNextButton && !isNextDropdownItem && nextDropdown) {
+      nextDropdown.style.display = "none";
+    }
   });
 }
