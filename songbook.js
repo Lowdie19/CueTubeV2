@@ -203,8 +203,20 @@ validSongs.forEach((song, index) => {
   const plusIcon = document.createElement("i");
   plusIcon.className = "fa-solid fa-circle-plus songbook-plus-icon";
   plusIcon.style.cursor = "pointer";
+  
+    // 🔥 Hide + icon entirely in delete-selection mode
+  if (selectionMode) {
+    plusIcon.style.display = "none";
+  }
+
 
   plusIcon.addEventListener("click", async (e) => {
+    // ⛔ In delete-selection mode: do nothing
+    if (selectionMode) {
+      e.stopPropagation();
+      return;
+  }
+    
     e.stopPropagation();
     playSound("clickA");
     if (!song.id) {
@@ -286,6 +298,9 @@ validSongs.forEach((song, index) => {
   div.addEventListener("pointerdown", (e) => {
     const currentTime = new Date().getTime();
     const tapLength = currentTime - lastTap;
+
+  // 🔥 Prevent toggle while in delete-selection mode
+  if (selectionMode) return;
 
     if (tapLength < 400 && tapLength > 0) {
       // If another item has trash active, reset it
