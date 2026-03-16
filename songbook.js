@@ -12,6 +12,14 @@ const songbookListDiv = document.getElementById("songbookList");
 const searchInput = document.getElementById("songbookSearch");
 
 // DELETE SELECTED BUTTON
+const style2 = document.createElement("style");
+style2.textContent = `
+.song-selected {
+  background: rgba(255,255,255,0.09);
+  transition: background 0.15s ease;
+}
+`;
+document.head.appendChild(style2);
 const deleteSelectedBtn = document.createElement("button");
 deleteSelectedBtn.setAttribute("data-theme", "red"); // <-- use red theme
 deleteSelectedBtn.classList.add("full-width");       // optional: full-width button
@@ -130,6 +138,10 @@ let activeTrashItem = null; // keep track of which song is showing trash
 
 validSongs.forEach((song, index) => {
   const div = document.createElement("div");
+  
+      if (selectionMode && selectedSongs.has(index)) {
+        div.classList.add("song-selected");
+    }
 
     // LONG PRESS (2 seconds) to activate selection mode
     div.addEventListener("pointerdown", () => {
@@ -159,10 +171,12 @@ validSongs.forEach((song, index) => {
 
       checkbox.checked = !checkbox.checked;
 
-      if(checkbox.checked){
+      if (checkbox.checked) {
           selectedSongs.add(index);
-      }else{
+          div.classList.add("song-selected");   // highlight ON
+      } else {
           selectedSongs.delete(index);
+          div.classList.remove("song-selected"); // highlight OFF
       }
 
       deleteSelectedBtn.textContent =
