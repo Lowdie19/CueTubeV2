@@ -739,6 +739,37 @@
       pointer-events: none;
       transform: translateX(60px) translateY(-10px); /* push it outside rightContent */
     }
+
+/* Guest CueId */ 
+#guestCueId {
+  position: absolute;
+  top: 40px;
+  right: 85px; /* sits beside remote button */
+  
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: black;
+  color: white;
+  
+  font-size: 14px;
+  letter-spacing: 1px;
+  z-index: 99999;
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition: opacity 1s ease, transform 0.2s ease;
+}
+
+#guestCueId.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#guestCueId.hide {
+  opacity: 0;
+  pointer-events: none;
+}
 </style>
   
   
@@ -954,6 +985,7 @@
             data-icon="search"
             placeholder="Search songs..." />
         </section>
+    
 
       <!-- Tab Contents -->
       <div id="drawerTabs" style="flex: 1; overflow-y: auto; color: white">
@@ -961,6 +993,7 @@
         <div id="songbookList" style="display: flex; flex-direction: column; gap: 5px; padding: 10px">
           <!-- Songs will be injected here from JS -->
         </div>
+
 
         <!-- UP NEXT Title Holder -->
         <div
@@ -987,6 +1020,10 @@
 
     <!-- Right Content -->
     <div id="rightContent">
+      
+      <!-- Guest Cue ID -->
+      <div id="guestCueId">AB12</div>
+      
       
       <!-- Remote Button -->
       <div id="floatingRemoteBtn" title="Remote Control Mode">
@@ -1558,47 +1595,77 @@ function centerPlayerVertically() {
     });
 </script>
 
-<!-- Remote Button -->
-<script>
+
+<!-- Guest ID/Remote Button -->
+<script type="module">
+  import { openRemoteUI } from "./remote.js";
+
   const remoteBtn = document.getElementById("floatingRemoteBtn");
+  const guestCueEl = document.getElementById("guestCueId");
+
   let fadeInTimeout = null;
 
+  // Generate Guest Cue ID
+  function generateGuestCueId() {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const nums = "0123456789";
+    return (
+      letters[Math.floor(Math.random() * letters.length)] +
+      letters[Math.floor(Math.random() * letters.length)] +
+      nums[Math.floor(Math.random() * nums.length)] +
+      nums[Math.floor(Math.random() * nums.length)]
+    );
+  }
+
+  let guestCue = generateGuestCueId();
+  guestCueEl.innerHTML = `<span style="opacity:0.6;">Cue ID:</span> ${guestCue}`;
+
+  let isLoggedIn = false;
+
+  // Toggle button visibility
   function toggleRemoteBtn() {
     if (drawerOpen) {
-      // Clear any previous timer
       if (fadeInTimeout) clearTimeout(fadeInTimeout);
 
-      // Fade in after 2 seconds
       fadeInTimeout = setTimeout(() => {
-        remoteBtn.style.transition = "opacity 1s ease"; // ensure fade-in works
         remoteBtn.classList.add("show");
+
+        if (!isLoggedIn) {
+          guestCueEl.classList.add("show");
+          guestCueEl.classList.remove("hide");
+        }
       }, 1000);
 
     } else {
-      // Hide immediately without animation
-      if (fadeInTimeout) {
-        clearTimeout(fadeInTimeout);
-        fadeInTimeout = null;
-      }
+      if (fadeInTimeout) clearTimeout(fadeInTimeout);
 
-      remoteBtn.style.transition = "none"; // remove fade
       remoteBtn.classList.remove("show");
-
-      // Force reflow to apply instantly
-      void remoteBtn.offsetHeight;
-
-      // Restore transition for next show
-      remoteBtn.style.transition = "opacity 1s ease";
+      guestCueEl.classList.remove("show");
+      guestCueEl.classList.add("hide");
     }
   }
 
-  // Initial toggle
+  // Add listeners AFTER the function is defined
   window.addEventListener("DOMContentLoaded", toggleRemoteBtn);
+  hamburger.addEventListener("click", toggleRemoteBtn);
 
-  // Drawer toggle
-  hamburger.addEventListener("click", () => {
-    toggleRemoteBtn();
+  // Auth state handler
+  window.setAuthState = function (loggedIn) {
+    isLoggedIn = loggedIn;
+
+    if (isLoggedIn) {
+      guestCueEl.classList.remove("show");
+      guestCueEl.classList.add("hide");
+    } else {
+      toggleRemoteBtn();
+    }
+  };
+
+  // Remote button event
+  remoteBtn.addEventListener("click", () => {
+    openRemoteUI();
   });
+
 </script>
 
 
