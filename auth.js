@@ -5,6 +5,7 @@ import { playSound, createVolumeIcon } from './sounds.js';
 import { askConfirm } from './ui/ui-modals.js';
 import * as Events from './modules/eventBus.js';
 import { handleLoginSync } from './queue.js';
+import { initGuestIfNeeded, getGuestUser } from "./guest-session.js";
 
 // DOM references
 const authContainer = document.getElementById('authContainer');
@@ -26,6 +27,21 @@ const loginEye = loginBox.querySelector('.auth-eye-icon[data-target="loginPin"]'
 const registerEye = registerBox.querySelector('.auth-eye-icon[data-target="registerPin"]');
 const logoutLink = logoutBtn.querySelector("a");
 const songInput = document.getElementById("songInput");
+
+// Guest function
+export function getCurrentIdentity() {
+  if (_currentUser) {
+    return {
+      id: _currentUser.username,
+      username: _currentUser.username,
+      isGuest: false
+    };
+  }
+
+  const guest = getGuestUser();
+  return guest;
+}
+
 
 // State
 let _currentUser = null;
@@ -109,6 +125,12 @@ function bindAuthIcon(icon, action,type){
     _currentUser = { username, userData };
     triggerAuthChange();
     Events.emit('auth:login', _currentUser);
+    
+    window.setAuthState(true);
+    
+    // ⭐ MAKE REMOTE UI WORK
+    window.isUserLoggedIn = true;
+    window.userName = username;
 
     // ---- LOAD USER QUEUE ----
 import('./queue.js').then(async ({ queue, renderQueue, playCurrentSong, setCurrentSongIndex }) => {
@@ -217,6 +239,11 @@ logoutLink.addEventListener('click', e => {
         _currentUser = null;
         triggerAuthChange();
         Events.emit('auth:logout', null);
+        
+        window.setAuthState(false);
+        
+        window.isUserLoggedIn = false;
+        window.userName = "";
 
         profileVolumeSection.style.display = 'none';
         authContainer.style.display = 'flex';
@@ -288,8 +315,15 @@ logoutLink.addEventListener('click', e => {
 // -----------------------
 // Auth state listener (on page load)
 listenForAuthChanges(async user => {
+  const guest = initGuestIfNeeded(!!user);
+  
   if (user) {
     _currentUser = { username: user.username, userData: user };
+
+    // ⭐ Fix: Update REMOTE UI globals
+    window.isUserLoggedIn = true;
+    window.userName = user.username;
+
     profileVolumeSection.style.display = 'flex';
     authContainer.style.display = 'none';
     myProfileDiv.innerHTML = '';
@@ -298,11 +332,15 @@ listenForAuthChanges(async user => {
     createVolumeIcon(myVolumeDiv);
     logoutBtn.style.display = 'block';
 
-    // ✅ update placeholder for all devices
     songInput.placeholder = "Paste song URL or Input song number here";
     
   } else {
     _currentUser = null;
+
+    // ⭐ Fix: Reset globals
+    window.isUserLoggedIn = false;
+    window.userName = "";
+
     authContainer.style.display = 'flex';
     profileVolumeSection.style.display = 'none';
     showLogin();
@@ -310,7 +348,6 @@ listenForAuthChanges(async user => {
     resetPinEye(loginPin, loginEye);
     resetPinEye(registerPin, registerEye);
 
-    // ✅ revert placeholder for all devices
     songInput.placeholder = "Paste song URL / link here";
   }
 });
