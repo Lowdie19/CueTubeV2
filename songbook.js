@@ -437,7 +437,10 @@ export async function loadUserSongbook() {
     if (!b.title) return -1;
     return a.title.toLowerCase().localeCompare(b.title.toLowerCase());
   });
-
+  
+  // ⭐⭐ MAKE SONGBOOK AVAILABLE TO REMOTE UI ⭐⭐
+  window.currentSongbook = [...songbook];
+  
   // ------------------------------
   // Render songbook (Quick Guide logic still works)
   renderSongbook();
