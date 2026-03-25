@@ -10,7 +10,7 @@ const modalCSS = `
   background: transparent;
   justify-content: center;
   align-items: center;
-  z-index: 2000;
+  z-index: 3005;
 }
 
 .modal-content h3, .modal-content p {
