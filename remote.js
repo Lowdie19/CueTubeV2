@@ -76,9 +76,6 @@ ui.innerHTML = `
       class="ui-input"
       data-theme="magenta"
       data-icon="search"
-      
-      data-modal-safe <!-- for not closing the modal automatically  -->
-      
       style="
         width:100%;
         margin-top:12px;
@@ -176,7 +173,7 @@ function renderSendModal(song) {
     title: "Send",
     message: `
       <span style="color: cyan;">${song.title}</span><br>
-      <input id="cueInputModal" class="ui-input" data-theme="white" data-modal-safe placeholder="Input receiver's Cue ID" style="width:100%; margin-top:15px; box-sizing:border-box;">
+      <input id="cueInputModal" class="ui-input" data-theme="white" placeholder="Input receiver's Cue ID" style="width:100%; margin-top:15px; box-sizing:border-box;">
       <div style="margin-top:8px; text-align:center;">
         <span style="color:gray;">or</span> <span id="openConnectModal" style="color:white; text-decoration:underline; cursor:pointer;">Connect</span>
       </div>
@@ -209,7 +206,7 @@ function renderSendModal(song) {
 function openConnectModal() {
   askConfirm({
     title: "Connect to",
-    message: `<input id="connectCueInput" class="ui-input" data-theme="white" data-modal-safe placeholder="Input Cue ID / Profile name" style="width:100%; box-sizing:border-box;">`,
+    message: `<input id="connectCueInput" class="ui-input" data-theme="white" placeholder="Input Cue ID / Profile name" style="width:100%; box-sizing:border-box;">`,
     theme: "cyan",
     onYes: async () => {
       const cueInput = document.getElementById("connectCueInput");
