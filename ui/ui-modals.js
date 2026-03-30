@@ -1,7 +1,6 @@
 /* =============================
    Glass-style Modal System (theme-colored frost + fade close)
 ============================= */
-import { disableCustomKeyboard, enableCustomKeyboard } from "../keyboard.js";
 
 const modalCSS = `
 .modal {
@@ -90,18 +89,12 @@ export function setupModals() {
     if(closeBtn) closeBtn.onclick = () => closeModal(modal);
 
     modal.onclick = e => {
-      // If clicking an element marked safe → do NOT close
-      if (e.target.closest("[data-modal-safe]")) return;
-
-      // If clicking outside the modal content → close
-      if (!content.contains(e.target)) closeModal(modal);
+      if(!content.contains(e.target)) closeModal(modal);
     };
   });
 }
 
 export function openModal(modal) {
-  disableCustomKeyboard();
-  
   modal.style.display = "flex";
   modal.classList.add("modal-open");
   modal.classList.remove("modal-closing");
@@ -113,8 +106,6 @@ export function closeModal(modal) {
   setTimeout(() => {
     modal.style.display = "none";
     modal.classList.remove("modal-closing");
-    
-    enableCustomKeyboard();
   }, 250);
 }
 
