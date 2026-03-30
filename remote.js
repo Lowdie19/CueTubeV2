@@ -3,12 +3,10 @@ import { db } from "./firebase-init.js";
 import { collection, getDocs, updateDoc, arrayUnion, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { showPopup } from "./ui/ui-popups.js";
 import { askConfirm } from "./ui/ui-modals.js";
-import { disableCustomKeyboard, enableCustomKeyboard } from "./keyboard.js";
 
 let connectedCueId = null; // persistent connection
 
 export function openRemoteUI() {
-  disableCustomKeyboard();
   const oldUI = document.getElementById("remoteUI");
   if (oldUI) oldUI.remove();
 
@@ -78,6 +76,9 @@ ui.innerHTML = `
       class="ui-input"
       data-theme="magenta"
       data-icon="search"
+      
+      data-modal-safe <!-- for not closing the modal automatically  -->
+      
       style="
         width:100%;
         margin-top:12px;
@@ -117,7 +118,6 @@ ui.innerHTML = `
 
   ui.querySelector("#cueCloseBtn").onclick = () => ui.remove();
   ui.querySelector("#disconnectBtn").onclick = () => {
-    enableCustomKeyboard();
     connectedCueId = null;
     showPopup("Disconnected", 2000, "cyan");
   };
@@ -176,7 +176,7 @@ function renderSendModal(song) {
     title: "Send",
     message: `
       <span style="color: cyan;">${song.title}</span><br>
-      <input id="cueInputModal" class="ui-input" data-theme="white" placeholder="Input receiver's Cue ID" style="width:100%; margin-top:15px; box-sizing:border-box;">
+      <input id="cueInputModal" class="ui-input" data-theme="white" data-modal-safe placeholder="Input receiver's Cue ID" style="width:100%; margin-top:15px; box-sizing:border-box;">
       <div style="margin-top:8px; text-align:center;">
         <span style="color:gray;">or</span> <span id="openConnectModal" style="color:white; text-decoration:underline; cursor:pointer;">Connect</span>
       </div>
@@ -209,7 +209,7 @@ function renderSendModal(song) {
 function openConnectModal() {
   askConfirm({
     title: "Connect to",
-    message: `<input id="connectCueInput" class="ui-input" data-theme="white" placeholder="Input Cue ID / Profile name" style="width:100%; box-sizing:border-box;">`,
+    message: `<input id="connectCueInput" class="ui-input" data-theme="white" data-modal-safe placeholder="Input Cue ID / Profile name" style="width:100%; box-sizing:border-box;">`,
     theme: "cyan",
     onYes: async () => {
       const cueInput = document.getElementById("connectCueInput");
