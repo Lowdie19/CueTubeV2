@@ -1,15 +1,3 @@
-let customKeyboardEnabled = true;
-
-export function disableCustomKeyboard() {
-  customKeyboardEnabled = false;
-  const kb = document.getElementById("customKeyboard");
-  if (kb) kb.style.display = "none"; // hide immediately
-}
-
-export function enableCustomKeyboard() {
-  customKeyboardEnabled = true;
-}
-
 export function initCustomKeyboard() {
   const isMobile =
     /android|iphone|ipad|ipod|opera mini|iemobile|wpdesktop/i.test(navigator.userAgent) ||
@@ -228,22 +216,14 @@ export function initCustomKeyboard() {
   // ----------------------------------------------------
   // INPUT OVERRIDE
   // ----------------------------------------------------
-document.querySelectorAll("input").forEach(input => {
-  input.addEventListener("pointerdown", e => {
-
-    // ⛔ If disabled → allow normal keyboard
-    if (!customKeyboardEnabled) {
-      input.removeAttribute("inputmode");
-      return; // let native keyboard appear
-    }
-
-    // ✅ Otherwise use custom keyboard
-    e.preventDefault();
-    input.setAttribute("inputmode", "none");
-    input.removeAttribute("readonly");
-    openKeyboardForInput(input);
+  document.querySelectorAll("input").forEach(input => {
+    input.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      input.setAttribute("inputmode", "none");
+      input.removeAttribute("readonly");
+      openKeyboardForInput(input);
+    });
   });
-});
 
   // ----------------------------------------------------
   // KEY PRESS HANDLER
