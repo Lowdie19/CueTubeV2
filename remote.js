@@ -3,10 +3,12 @@ import { db } from "./firebase-init.js";
 import { collection, getDocs, updateDoc, arrayUnion, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { showPopup } from "./ui/ui-popups.js";
 import { askConfirm } from "./ui/ui-modals.js";
+import { disableCustomKeyboard, enableCustomKeyboard } from "./keyboard.js";
 
 let connectedCueId = null; // persistent connection
 
 export function openRemoteUI() {
+  disableCustomKeyboard();
   const oldUI = document.getElementById("remoteUI");
   if (oldUI) oldUI.remove();
 
@@ -115,6 +117,7 @@ ui.innerHTML = `
 
   ui.querySelector("#cueCloseBtn").onclick = () => ui.remove();
   ui.querySelector("#disconnectBtn").onclick = () => {
+    enableCustomKeyboard();
     connectedCueId = null;
     showPopup("Disconnected", 2000, "cyan");
   };
