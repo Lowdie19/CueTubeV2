@@ -5,12 +5,14 @@ import { showPopup } from "./ui/ui-popups.js";
 import { askConfirm } from "./ui/ui-modals.js";
 
 let connectedCueId = null; // persistent connection
+let connectedProfileName = null;
 
 export function openRemoteUI() {
   const oldUI = document.getElementById("remoteUI");
   if (oldUI) oldUI.remove();
 
   const songbook = window.currentSongbook || [];
+  const headerTitle = window.isUserLoggedIn ? `${window.userName}'s` : "Community";
 
   const ui = document.createElement("div");
   ui.id = "remoteUI";
@@ -24,108 +26,169 @@ export function openRemoteUI() {
   ui.style.zIndex = "3000";
   ui.style.overflow = "hidden";
 
-  const headerTitle = window.isUserLoggedIn ? `${window.userName}'s` : "Community";
+  ui.innerHTML = `
+    <!-- Close Button -->
+    <button class="btnX" id="cueCloseBtn" title="Close" 
+      style="position:fixed; top:10px; right:10px; z-index:4000;">✕</button>
 
-ui.innerHTML = `
-  <button class="btnX" id="cueCloseBtn" title="Close" 
-    style="position:fixed; top:10px; right:10px; z-index:4000;">✕</button>
-
-  <div id="remoteHeader"
-    style="
-      position:fixed; top:0; left:0; width:100%;
-      background:#111; padding:20px; padding-bottom:12px;
-      box-sizing:border-box; z-index:3001;
-    "
-  >
-
-    <!-- LINE 1: COMMUNITY -->
-    <div style="font-size:24px; font-weight:bold; color:magenta; margin-bottom:6px;">
-      ${headerTitle}
-    </div>
-
-    <!-- LINE 2: Songbook + Play Icon + Connected Name + Disconnect -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-
-      <!-- LEFT GROUP: Songbook + Connected Name + Play -->
-      <div style="display:flex; align-items:center; gap:12px;">
-        <span style="font-size:14px; color:gray;">Songbook</span>
-
-        <!-- Connected Profile Name + Play Icon -->
-        <span id="connectionIndicator" style="font-size:14px; color:#00ff88; display:flex; align-items:center; gap:4px;">
-          ${connectedCueId ? `<span style="color:cyan;">▶</span>${connectedCueId}` : ""}
-        </span>
-      </div>
-
-      <!-- RIGHT SIDE: Disconnect Button -->
-      <button id="disconnectBtn"
-        style="
-          padding:6px 14px;
-          border-radius:8px;
-          background:red;
-          color:white;
-          font-size:14px;
-        ">
-        Disconnect
-      </button>
-
-    </div>
-
-    <!-- SEARCH FIELD -->
-    <input id="remoteSearch"
-      placeholder="Search songs..."
-      class="ui-input"
-      data-theme="magenta"
-      data-icon="search"
+    <!-- Header -->
+    <div id="remoteHeader"
       style="
-        width:100%;
-        margin-top:12px;
-        box-sizing:border-box;
+        position:fixed; top:0; left:0; width:100%;
+        background:#111; padding:20px; padding-bottom:12px;
+        box-sizing:border-box; z-index:3001;
       "
     >
-  </div>
+      <!-- LINE 1: Title -->
+      <div style="font-size:24px; font-weight:bold; color:magenta; margin-bottom:6px;">
+        ${headerTitle}
+      </div>
 
-  <div id="remoteSongList"
-    style="
-      position:absolute; left:0; width:100%;
-      overflow-y:auto;
-      padding:0 20px 50px;
-      box-sizing:border-box;
-      display:flex; flex-direction:column; gap:8px;
-    "
-  ></div>
-`;
-  
+      <!-- LINE 2: Songbook + Connection -->
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:12px; flex:1;">
+          <span style="font-size:14px; color:gray;">Songbook</span>
+          <span id="connectionIndicator"
+                style="font-size:14px; color:#00ff88; display:flex; align-items:center; gap:10px;">
+          </span>
+        </div>
+      </div>
+
+      <!-- LINE 3: Search + Disconnect -->
+      <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+        <input id="remoteSearch"
+          placeholder="Search songs..."
+          class="ui-input"
+          data-theme="magenta"
+          data-icon="search"
+          style="flex:1; box-sizing:border-box;"
+        >
+      <button id="disconnectBtn"
+        class="ui-btn"
+        data-theme="red"
+        style="display:none; white-space:nowrap;"
+      >
+        Disconnect
+      </button>
+      </div>
+    </div>
+
+    <!-- Songs List -->
+    <div id="remoteSongList"
+      style="
+        position:absolute; left:0; width:100%;
+        overflow-y:auto;
+        padding:0 20px 50px;
+        box-sizing:border-box;
+        display:flex; flex-direction:column; gap:8px;
+      "
+    ></div>
+  `;
+
   document.body.appendChild(ui);
   setupInputsC();
 
+  // 🔹 Restore connected state
+  const indicator = ui.querySelector("#connectionIndicator");
+  const searchEl = ui.querySelector("#remoteSearch");
+  const listEl = ui.querySelector("#remoteSongList");
+  
+  // AFTER appending the UI and selecting disconnectBtn
+  const disconnectBtn = ui.querySelector("#disconnectBtn");
+
+  // ✅ Ensure theme + hover + ripple even when hidden initially
+  function styleDynamicBtn(btn, themeName = "cyan") {
+    btn.classList.add("ui-btn");
+
+    const namedColors = { cyan: "#0ff", magenta: "#ff00ff", yellow: "#ff0", green: "#0f0", red: "#f00" };
+    const themeColor = namedColors[themeName] || themeName;
+
+    btn.style.border = `2px solid ${themeColor}`;
+    btn.style.boxShadow = `0 0 10px ${themeColor}, inset 0 0 5px ${themeColor}`;
+    btn.style.color = "white";
+    btn.style.transition = "transform 0.1s, box-shadow 0.1s, border 0.1s, color 0.1s"; // match generic timing
+
+    // Ripple effect and hover
+    if (!btn.classList.contains("ripple-ready")) {
+      btn.classList.add("ripple-ready");
+
+      btn.addEventListener("pointerdown", e => {
+        createRipple(e, btn, themeColor);
+        btn.classList.add("tap-animate");
+        btn.style.boxShadow = `0 0 25px ${themeColor}, inset 0 0 12px ${themeColor}`;
+        btn.style.color = themeColor;
+      });
+
+      const reset = () => {
+        btn.classList.remove("tap-animate");
+        btn.style.boxShadow = `0 0 10px ${themeColor}, inset 0 0 5px ${themeColor}`;
+        btn.style.color = "white";
+      };
+
+      btn.addEventListener("pointerup", reset);
+      btn.addEventListener("pointercancel", reset);
+      btn.addEventListener("pointerleave", reset);
+
+      // Hover only on non-touch devices
+      if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+        btn.addEventListener("mouseenter", () => {
+          btn.style.boxShadow = `0 0 25px ${themeColor}, inset 0 0 12px ${themeColor}`;
+          btn.style.color = themeColor;
+        });
+        btn.addEventListener("mouseleave", reset);
+      }
+    }
+  }
+
+  // Apply styling
+  styleDynamicBtn(disconnectBtn, "red");
+  
+  if (connectedCueId) {
+    indicator.innerHTML = `<span style="color:gray;">▶</span> ${connectedProfileName}`;
+    disconnectBtn.style.display = "inline-block";
+    setupInputsC(); // <-- call here so the button gets styled
+  } else {
+    indicator.innerHTML = "";
+    disconnectBtn.style.display = "none";
+  }
+
+  // Adjust songs list height
   const header = ui.querySelector("#remoteHeader");
   const HEADER_HEIGHT = header.offsetHeight;
-  const listEl = ui.querySelector("#remoteSongList");
   listEl.style.top = HEADER_HEIGHT + "px";
   listEl.style.height = `calc(100% - ${HEADER_HEIGHT}px)`;
-  const searchEl = ui.querySelector("#remoteSearch");
 
+  // Render song list
   renderSongs(songbook, listEl);
 
+  // Search filter
   searchEl.addEventListener("input", () => {
     const key = searchEl.value.toLowerCase();
     const filtered = songbook.filter(s => s.title.toLowerCase().includes(key));
     renderSongs(filtered, listEl);
   });
 
+  // Close & Disconnect
   ui.querySelector("#cueCloseBtn").onclick = () => ui.remove();
-  ui.querySelector("#disconnectBtn").onclick = () => {
+  disconnectBtn.onclick = () => {
     connectedCueId = null;
-    showPopup("Disconnected", 2000, "cyan");
+    connectedProfileName = null;
+    indicator.innerHTML = "";
+    disconnectBtn.style.display = "none";
+    setTimeout(() => {
+      showPopup("Disconnected", 2000, "cyan");
+    }, 1500);
   };
 }
 
 // New helper: handles song row clicks
 function handleSongClick(song) {
-  if (connectedCueId) {
-    renderSendModalFixed(song);
+  if (!connectedCueId) {
+    // No connection yet → force Connect Modal
+    openConnectModal(song);
   } else {
-    renderSendModal(song);
+    // Already connected → open Send Modal
+    renderSendModalFixed(song);
   }
 }
 
@@ -167,55 +230,38 @@ function renderSongs(list, container) {
   });
 }
 
-// Initial Send modal (input + optional connect)
+// Initial Send modal
 function renderSendModal(song) {
-  askConfirm({
-    title: "Send",
-    message: `
-      <span style="color: cyan;">${song.title}</span><br>
-      <input id="cueInputModal" class="ui-input" data-theme="white" placeholder="Input receiver's Cue ID" style="width:100%; margin-top:15px; box-sizing:border-box;">
-      <div style="margin-top:8px; text-align:center;">
-        <span style="color:gray;">or</span> <span id="openConnectModal" style="color:white; text-decoration:underline; cursor:pointer;">Connect</span>
-      </div>
-    `,
-    theme: "magenta",
-    onYes: async () => {
-      const cueInput = document.getElementById("cueInputModal");
-      const targetCueId = cueInput?.value.trim();
-      if (!targetCueId) {
-        showPopup("Cannot be empty ❌", 2000, "red");
-        return false;
-      }
-      return await sendToUser(targetCueId, song);
-    },
-    onNo: () => {}
-  });
-
-  setupInputsC();
-
-  const connectLink = document.getElementById("openConnectModal");
-  if (connectLink) {
-    connectLink.addEventListener("click", e => {
-      e.stopPropagation();
-      openConnectModal(song);
-    });
-  }
+  // Only used if connectedCueId suddenly becomes null
+  openConnectModal(song);
 }
 
 // Connect modal
-function openConnectModal() {
+function openConnectModal(songToSend = null) {
   askConfirm({
-    title: "Connect to",
-    message: `<input id="connectCueInput" class="ui-input" data-theme="white" placeholder="Input Cue ID / Profile name" style="width:100%; box-sizing:border-box;">`,
+    title: "Connect",
+    message: `
+      <input id="connectCueInput" class="ui-input" data-theme="white"
+        placeholder="Input Cue ID / Profile name"
+        style="width:100%; box-sizing:border-box;">
+    `,
     theme: "cyan",
     onYes: async () => {
       const cueInput = document.getElementById("connectCueInput");
       const targetCueId = cueInput?.value.trim();
+
       if (!targetCueId) {
-        showPopup("Cannot be empty ❌", 2000, "red");
+        showPopup("Input Cue ID / Profile name first! ❌", 2000, "red");
         return false;
       }
-      return await connectToUser(targetCueId); // new function
+
+      const ok = await connectToUser(targetCueId);
+      if (!ok) return false;
+
+      // After successful connect → send the song immediately
+      if (songToSend) renderSendModalFixed(songToSend);
+
+      return true;
     },
     onNo: () => {}
   });
@@ -238,12 +284,23 @@ async function connectToUser(cueIdOrName) {
     }
 
     connectedCueId = targetUserDoc.data().cueId; // persist connection
-    showPopup(`Connected to ${targetUserDoc.data().profile?.name || connectedCueId} ✅`, 2000, "green");
-
+    connectedProfileName = targetUserDoc.data().profile?.name || connectedCueId;
+    setTimeout(() => {
+    showPopup(
+      `Connected to ${targetUserDoc.data().profile?.name || connectedCueId} ✅`,
+      2000,
+      "green"
+      );
+    }, 1500);
+    
+    // Show disconnect button
+    const disconnectBtn = document.getElementById("disconnectBtn");
+    if (disconnectBtn) disconnectBtn.style.display = "inline-block";
+    
     // Update the indicator
     const indicator = document.getElementById("connectionIndicator");
     if (indicator) {
-      indicator.textContent = `${targetUserDoc.data().profile?.name || connectedCueId}`;
+      indicator.innerHTML = `<span style="color:gray;">▶</span> ${connectedProfileName}`;
     }
 
     return true;
@@ -256,8 +313,9 @@ async function connectToUser(cueIdOrName) {
 
 // Send modal after connection (falls back to initial modal if disconnected)
 function renderSendModalFixed(song) {
+  // Connection gone? → Force Connect Modal again
   if (!connectedCueId) {
-    return renderSendModal(song);
+    return openConnectModal(song);
   }
 
   askConfirm({
@@ -269,6 +327,7 @@ function renderSendModalFixed(song) {
     },
     onNo: () => {}
   });
+
   setupInputsC();
 }
 
